@@ -1,0 +1,9 @@
+# Store text with LF everywhere (shell scripts must not get CRLF on Windows checkouts).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.woff binary
+*.woff2 binary
+*.zip binary

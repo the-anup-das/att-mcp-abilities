@@ -1,0 +1,17 @@
+# Build output (build.ps1 → dist/)
+/dist/
+*.zip
+
+# Local tooling
+.DS_Store
+Thumbs.db
+node_modules/
+
+# Brand previews (brand/make.mjs --preview)
+/brand/out/
+
+# End-to-end test site and run artifacts (tests/e2e/setup.sh, run-all.sh)
+/tests/e2e/wordpress/
+/tests/e2e/app-password.txt
+/tests/e2e/server.log
+/tests/e2e/*.part

@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_call: # the Deploy workflow runs this first
+
+jobs:
+  lint:
+    name: PHP ${{ matrix.php }} syntax
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['7.4', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - run: find att-mcp-abilities tests/e2e -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  plugin-check:
+    name: WordPress.org Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: att-mcp-abilities
+          include-experimental: true
+
+  e2e:
+    name: E2E (WordPress ${{ matrix.wp }}, PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - wp: wordpress-6.9 # minimum supported
+            php: '7.4'
+          - wp: latest
+            php: '8.3'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_sqlite, sqlite3, mbstring, curl, gd, fileinfo, intl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build the test site (WordPress + SQLite + MCP Adapter + this plugin)
+        run: WP_ZIP=${{ matrix.wp }} bash tests/e2e/setup.sh
+      - name: Run all end-to-end suites (incl. the admin UI in Chrome)
+        run: |
+          export ATT_BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          bash tests/e2e/run-all.sh --net
+
+  build:
+    name: Build zip
+    runs-on: ubuntu-latest
+    needs: [lint, plugin-check, e2e]
+    steps:
+      - uses: actions/checkout@v4
+      - run: pwsh ./build.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: att-mcp-abilities
+          path: dist/*.zip

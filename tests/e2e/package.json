@@ -1,0 +1,9 @@
+{
+  "name": "att-mcp-abilities-e2e",
+  "private": true,
+  "description": "Browser test of the MCP admin screens and WordPress.org screenshot generator.",
+  "type": "module",
+  "devDependencies": {
+    "puppeteer-core": "25.12.0"
+  }
+}

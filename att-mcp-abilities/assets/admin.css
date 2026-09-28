@@ -1,0 +1,143 @@
+/* ATT MCP Abilities — admin design system (enqueued on MCP screens). */
+:root{
+  --att-primary:#2271b1; --att-primary-d:#135e96;
+  --att-ok:#1e8a3c; --att-ok-bg:#e6f6ea;
+  --att-danger:#d63638; --att-danger-bg:#fce8e8;
+  --att-ink:#1d2327; --att-muted:#646970; --att-faint:#8c8f94;
+  --att-line:#e2e4e7; --att-card:#fff;
+  --att-radius:12px;
+  --att-shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.04);
+}
+
+.att-wrap{max-width:940px;margin:24px 20px 64px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--att-ink)}
+.att-wrap *{box-sizing:border-box}
+
+/* ── Top bar + nav ────────────────────────────── */
+.att-topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;background:var(--att-card);border:1px solid var(--att-line);border-radius:var(--att-radius);padding:16px 20px;box-shadow:var(--att-shadow);margin-bottom:22px}
+.att-brand{display:flex;align-items:center;gap:14px}
+.att-logo{width:42px;height:42px;flex-shrink:0;display:block;border-radius:11px;box-shadow:0 2px 6px rgba(28,47,122,.35)}
+.att-brand-title{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.att-ver{font-size:11px;font-weight:700;color:var(--att-primary);background:#eaf2fb;padding:2px 8px;border-radius:20px}
+.att-brand-sub{font-size:12.5px;color:var(--att-muted);margin-top:2px}
+.att-nav{display:flex;gap:4px;background:#f0f1f3;padding:4px;border-radius:10px}
+.att-nav-link{font-size:13px;font-weight:600;color:var(--att-muted);text-decoration:none;padding:7px 16px;border-radius:7px;transition:all .15s}
+.att-nav-link:hover{color:var(--att-ink)}
+.att-nav-link.is-active{background:var(--att-card);color:var(--att-primary);box-shadow:var(--att-shadow)}
+
+.att-desc{color:var(--att-muted);margin:0 0 20px;font-size:13.5px;line-height:1.65}
+
+/* ── Stats ────────────────────────────────────── */
+.att-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+.att-stat{background:var(--att-card);border:1px solid var(--att-line);border-radius:var(--att-radius);padding:18px 20px;box-shadow:var(--att-shadow);position:relative;overflow:hidden}
+.att-stat:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--att-primary)}
+.att-stat--on:before{background:var(--att-ok)}
+.att-stat--wr:before{background:var(--att-danger)}
+.att-stat-n{font-size:30px;font-weight:800;line-height:1}
+.att-stat--on .att-stat-n{color:var(--att-ok)}
+.att-stat--wr .att-stat-n{color:var(--att-danger)}
+.att-stat-l{font-size:11px;color:var(--att-faint);margin-top:6px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+
+/* ── Cards / addons ───────────────────────────── */
+.att-addon{background:var(--att-card);border:1px solid var(--att-line);border-radius:var(--att-radius);margin-bottom:16px;overflow:hidden;box-shadow:var(--att-shadow)}
+.att-addon-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border-bottom:1px solid var(--att-line)}
+.att-addon-meta{display:flex;flex-direction:column;gap:3px}
+.att-addon-title{font-weight:700;font-size:15px;display:flex;align-items:center;gap:9px}
+.att-addon-desc{font-size:12.5px;color:var(--att-muted);line-height:1.5}
+.att-controls .att-addon-head{background:linear-gradient(0deg,#fafbfc,#fff)}
+.att-addon-note{padding:16px 20px;font-size:12.5px;color:var(--att-muted);font-style:italic}
+.att-addon-body.att-dim{opacity:.45;pointer-events:none}
+
+/* ── Badges ───────────────────────────────────── */
+.att-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px}
+.att-badge--ok{background:var(--att-ok-bg);color:var(--att-ok)}
+.att-badge--off{background:#f0f0f1;color:var(--att-faint)}
+.att-badge--core{background:#eaf2fb;color:var(--att-primary)}
+
+/* ── Group header + rows ──────────────────────── */
+.att-gh{background:#fafbfc;padding:9px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--att-line)}
+.att-gt{font-weight:700;font-size:11.5px;color:var(--att-faint);margin:0;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px}
+.att-toggle-all{font-size:12px;color:var(--att-primary);cursor:pointer;background:none;border:none;padding:0;font-weight:600}
+.att-toggle-all:hover{color:var(--att-primary-d)}
+.att-row{display:grid;grid-template-columns:1fr auto;align-items:center;padding:14px 20px;border-bottom:1px solid #f1f1f3;gap:12px;transition:background .12s}
+.att-row:last-child{border-bottom:none}
+.att-row:hover{background:#fafbfc}
+.att-al{font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.att-ad{font-size:12px;color:var(--att-muted);line-height:1.5}
+.att-ac{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px}
+.att-ac--read{background:#eaf2fb;color:var(--att-primary)}
+.att-ac--write{background:var(--att-danger-bg);color:var(--att-danger)}
+
+/* ── Toggle switch ────────────────────────────── */
+.att-sw{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.att-sw input{opacity:0;width:0;height:0}
+.att-sl{position:absolute;cursor:pointer;inset:0;background:#c9ccd1;border-radius:34px;transition:.25s}
+.att-sl:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+input:checked+.att-sl{background:var(--att-ok)}
+input:checked+.att-sl:before{transform:translateX(20px)}
+input:disabled+.att-sl{opacity:.5;cursor:not-allowed}
+
+/* ── Save bar + credit ────────────────────────── */
+.att-savebar{display:flex;align-items:center;gap:16px;margin-top:22px;padding:16px 20px;background:var(--att-card);border:1px solid var(--att-line);border-radius:var(--att-radius);box-shadow:var(--att-shadow)}
+.att-savebar .button-primary{font-size:14px;padding:6px 22px;height:auto}
+.att-savenote{font-size:12px;color:var(--att-muted)}
+.att-credit{margin-top:18px;font-size:12px;color:var(--att-faint);text-align:center}
+.att-credit a{color:var(--att-primary);text-decoration:none}
+
+/* ── Config page ──────────────────────────────── */
+.att-tabs{display:flex;gap:4px;margin-bottom:16px;background:#f0f1f3;padding:4px;border-radius:10px;width:fit-content;max-width:100%;flex-wrap:wrap}
+.att-tab-btn{background:none;border:none;padding:8px 18px;font-size:13px;font-weight:600;color:var(--att-muted);cursor:pointer;border-radius:7px;transition:all .15s}
+.att-tab-btn:hover{color:var(--att-ink)}
+.att-tab-btn.att-tab-active{background:var(--att-card);color:var(--att-primary);box-shadow:var(--att-shadow)}
+.att-tab-panel{display:none}
+.att-tab-panel.att-tab-panel-active{display:block}
+.att-config-box{background:var(--att-card);border:1px solid var(--att-line);border-radius:var(--att-radius);overflow:hidden;box-shadow:var(--att-shadow)}
+.att-instructions{padding:18px 20px;border-bottom:1px solid var(--att-line)}
+.att-instructions p{margin:0 0 9px;color:#3c434a;font-size:13.5px}
+.att-instructions p:last-child{margin:0}
+.att-instructions code{background:#f0f1f3;padding:3px 6px;border-radius:5px;font-size:12.5px;color:var(--att-danger);font-family:Consolas,Monaco,monospace}
+.att-config-header{background:#fafbfc;padding:11px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--att-line)}
+.att-config-title{font-weight:700;font-size:13px;color:var(--att-ink);margin:0;font-family:Consolas,Monaco,monospace}
+.att-copy-btn{font-size:12px;color:var(--att-primary);cursor:pointer;background:none;border:none;padding:0;font-weight:600;display:flex;align-items:center;gap:5px;transition:color .2s}
+.att-copy-btn:hover{color:var(--att-ok)}
+.att-code-area{background:#1e1e2e;color:#cdd6f4;padding:20px;margin:0;font-family:Consolas,Monaco,monospace;font-size:13px;line-height:1.6;overflow-x:auto;white-space:pre}
+
+/* ── Activity table ───────────────────────────── */
+.att-table{width:100%;border-collapse:collapse;background:var(--att-card);border:1px solid var(--att-line);border-radius:var(--att-radius);overflow:hidden;box-shadow:var(--att-shadow)}
+.att-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--att-faint);background:#fafbfc;padding:11px 14px;border-bottom:1px solid var(--att-line);font-weight:700}
+.att-table td{padding:11px 14px;border-bottom:1px solid #f1f1f3;font-size:12.5px;vertical-align:top;color:var(--att-ink)}
+.att-table tr:last-child td{border-bottom:none}
+.att-table tr:hover td{background:#fafbfc}
+.att-table code{background:#f0f1f3;padding:2px 6px;border-radius:5px;font-size:12px;white-space:nowrap}
+.att-empty{padding:26px;text-align:center;color:var(--att-faint)}
+.att-table td.att-st-ok{color:var(--att-ok);font-weight:700}
+.att-table td.att-st-error{color:var(--att-danger);font-weight:700}
+.att-pre{white-space:pre-wrap;font-size:11px;background:#f6f7f9;padding:8px;border-radius:6px;margin:4px 0 0;overflow-x:auto}
+.att-summary{cursor:pointer;font-size:11px;color:var(--att-primary)}
+.att-table--spaced{margin-bottom:22px}
+.att-clear-form{margin-top:14px}
+
+/* ── Shared bits (1.9) ────────────────────────── */
+.att-warn{color:var(--att-danger);font-weight:600}
+.att-h2{font-size:15px;font-weight:700;margin:26px 0 12px;color:var(--att-ink)}
+.att-tip{margin-top:18px;font-size:12.5px}
+.att-key{font-size:10.5px;color:var(--att-faint);background:none;padding:0}
+.att-num{width:80px;text-align:right}
+.att-copy-btn .dashicons{font-size:16px;width:16px;height:16px}
+.att-copy-btn.is-copied{color:var(--att-ok)}
+
+/* ── Application Passwords (Connect screen) ───── */
+.att-pw-body{padding:18px 20px}
+.att-pw-form{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.att-pw-form .att-al{margin:0}
+.att-pw-note{margin:0 0 12px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.55}
+.att-pw-note--warn{background:var(--att-danger-bg);color:#8a1f20}
+.att-pw-note--ok{background:var(--att-ok-bg);color:#14582a}
+.att-pw-note code{background:rgba(255,255,255,.6);padding:1px 5px;border-radius:4px}
+.att-pw-result{margin-bottom:16px}
+.att-pw-value{display:flex;align-items:center;gap:14px;background:#1e1e2e;border-radius:8px;padding:12px 16px}
+.att-pw-value code{background:none;color:#a6e3a1;font-size:15px;letter-spacing:.5px;font-family:Consolas,Monaco,monospace}
+.att-pw-value .att-copy-btn{color:#cdd6f4}
+.att-pw-error{color:var(--att-danger);font-weight:600;margin:0 0 12px}
+.att-pw-table{margin-top:4px}
+.att-pw-revoked td{opacity:.45;text-decoration:line-through}
+.att-pw-foot{margin:12px 0 0;font-size:12.5px}

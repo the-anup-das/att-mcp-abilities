@@ -1,0 +1,15 @@
+{
+  "name": "att-mcp-abilities-brand",
+  "private": true,
+  "description": "Generates the ATT MCP Abilities logo, admin menu icon, and WordPress.org icons/banners.",
+  "type": "module",
+  "scripts": {
+    "build": "node make.mjs",
+    "preview": "node make.mjs --preview out"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "5.3.0",
+    "@resvg/resvg-js": "2.6.2",
+    "opentype.js": "2.0.0"
+  }
+}

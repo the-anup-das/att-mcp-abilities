@@ -1,0 +1,59 @@
+name: Deploy to WordPress.org
+
+# Publishes a release to the WordPress.org plugin directory when a version tag is
+# pushed, e.g.  git tag 1.9.1 && git push origin 1.9.1   (plain numbers, no "v").
+#
+# Needs two repository secrets (Settings › Secrets and variables › Actions):
+#   SVN_USERNAME  your WordPress.org username
+#   SVN_PASSWORD  the SVN password from WordPress.org › Profile › Account & Security
+# Works only after the plugin has been approved and its SVN repository exists.
+# See docs/RELEASING.md.
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write # to create the GitHub release
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Publish to WordPress.org
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches the plugin version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          header=$(sed -n 's/^[ *]*Version:[[:space:]]*\([^[:space:]]*\).*/\1/p' att-mcp-abilities/att-mcp-abilities.php | head -n1)
+          constant=$(sed -n "s/.*define( 'ATT_MCP_VERSION', '\([^']*\)'.*/\1/p" att-mcp-abilities/att-mcp-abilities.php | head -n1)
+          stable=$(sed -n 's/^Stable tag:[[:space:]]*\([^[:space:]]*\).*/\1/p' att-mcp-abilities/readme.txt | head -n1)
+          echo "tag=$tag header=$header constant=$constant stable=$stable"
+          if [ "$tag" != "$header" ] || [ "$tag" != "$constant" ] || [ "$tag" != "$stable" ]; then
+            echo "::error::Tag $tag must equal the plugin Version header ($header), ATT_MCP_VERSION ($constant) and the readme Stable tag ($stable)."
+            exit 1
+          fi
+
+      - name: Deploy trunk, tag and assets to WordPress.org SVN
+        id: deploy
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        with:
+          generate-zip: true
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: att-mcp-abilities
+          BUILD_DIR: att-mcp-abilities
+          ASSETS_DIR: .wordpress-org
+
+      - name: Create the GitHub release with the zip
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.deploy.outputs.zip-path }}
+          generate_release_notes: true
