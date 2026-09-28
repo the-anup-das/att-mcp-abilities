@@ -4,6 +4,7 @@ on:
   push:
     branches: ['**']
   pull_request:
+  workflow_dispatch: # "Run workflow" button in the Actions tab
   workflow_call: # the Deploy workflow runs this first
 
 jobs:

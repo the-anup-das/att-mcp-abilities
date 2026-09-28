@@ -12,6 +12,15 @@ This covers the one-time directory submission and every release after it. The pl
 
 `.wordpress-org/` holds `icon.svg`, `icon-128x128.png`, `icon-256x256.png`, `banner-772x250.png`, `banner-1544x500.png` and `screenshot-1..3.png`. The screenshots match the `== Screenshots ==` captions in `readme.txt`, in order. Regenerate the icons and banners with `cd brand && npm install && npm run build`, and the screenshots as described in [tests/e2e/README.md](../tests/e2e/README.md#screenshots).
 
+## The two workflows
+
+| Workflow | Runs when | Does |
+|---|---|---|
+| **CI** (`ci.yml`) | Every push and pull request, or on demand: **Actions › CI › Run workflow** | PHP 7.4/8.3 lint, Plugin Check, the end-to-end suite on WordPress 6.9 and the latest release, and builds the zip (download it from the run's **Artifacts**) |
+| **Deploy to WordPress.org** (`deploy.yml`) | A version tag is pushed (e.g. `1.9.0`) | Runs CI, checks that the tag matches the version, publishes to WordPress.org SVN, and creates the GitHub release with the zip |
+
+**Don't create a GitHub release or a version tag by hand before the plugin is approved.** A version tag starts the WordPress.org deploy, which fails until the SVN repository and secrets exist. The deploy workflow creates each release, zip included, for you.
+
 ## 1. One-time: get the plugin approved
 
 1. **WordPress.org account.** Log in or register at <https://login.wordpress.org/>. Turn on **two-factor authentication** (Profile › Account & Security); it is required for accounts that commit to plugins.
