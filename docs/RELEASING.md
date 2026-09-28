@@ -17,7 +17,7 @@ This covers the one-time directory submission and every release after it. The pl
 1. **WordPress.org account.** Log in or register at <https://login.wordpress.org/>. Turn on **two-factor authentication** (Profile › Account & Security); it is required for accounts that commit to plugins.
 2. **Contributors.** Put your WordPress.org username in `att-mcp-abilities/readme.txt`:
    `Contributors: your-username` (several are separated by commas). Commit and push.
-3. **Build the zip.** Either run `powershell -ExecutionPolicy Bypass -File build.ps1`, which produces `dist/att-mcp-abilities-<version>.zip`, or download the **att-mcp-abilities** artifact from the latest green CI run on GitHub.
+3. **Build the zip.** Either run `powershell -ExecutionPolicy Bypass -File build.ps1`, which produces `dist/att-mcp-abilities-<version>.zip`, or download the `att-mcp-abilities-<version>.zip` artifact from the latest green CI run on GitHub (Actions › CI › the run › Artifacts).
 4. **Submit.** Go to <https://wordpress.org/plugins/developers/add/>, upload the zip and accept the terms. The page runs Plugin Check on upload (this repo's CI runs the same checks) and shows the slug it will reserve (`att-mcp-abilities`).
 5. **Review.** You get an automated email, then a volunteer reviewer writes from `plugins@wordpress.org` (add it to your contacts so replies don't land in spam). Reply in that same email thread. If they ask for changes, fix them here, rebuild, and upload the new zip from the same *Add your plugin* page. Reviews can take several weeks; the page shows the current queue.
    Questions this plugin may get, and where the answers already live:

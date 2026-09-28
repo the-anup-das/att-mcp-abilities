@@ -14,7 +14,7 @@ jobs:
       matrix:
         php: ['7.4', '8.3']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -25,7 +25,7 @@ jobs:
     name: WordPress.org Plugin Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: wordpress/plugin-check-action@v1
         with:
           build-dir: att-mcp-abilities
@@ -43,13 +43,13 @@ jobs:
           - wp: latest
             php: '8.3'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           extensions: pdo_sqlite, sqlite3, mbstring, curl, gd, fileinfo, intl
           coverage: none
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Build the test site (WordPress + SQLite + MCP Adapter + this plugin)
@@ -64,9 +64,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, plugin-check, e2e]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: pwsh ./build.ps1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: att-mcp-abilities
           path: dist/*.zip
+          archive: false # the artifact is the plugin zip itself (att-mcp-abilities-<version>.zip)
