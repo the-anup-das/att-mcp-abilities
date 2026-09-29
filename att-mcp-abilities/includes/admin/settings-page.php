@@ -48,6 +48,8 @@ function att_mcp_group_label( $group ) {
         'Search'        => __( 'Search', 'att-mcp-abilities' ),
         'Menus'         => __( 'Menus', 'att-mcp-abilities' ),
         'Site'          => __( 'Site', 'att-mcp-abilities' ),
+        'Performance'   => __( 'Performance & caching', 'att-mcp-abilities' ),
+        'SEO'           => __( 'SEO', 'att-mcp-abilities' ),
         'History'       => __( 'History & undo', 'att-mcp-abilities' ),
         'Design'        => __( 'Design', 'att-mcp-abilities' ),
         'Site Editor'   => __( 'Site Editor (block themes)', 'att-mcp-abilities' ),
@@ -100,7 +102,7 @@ function att_mcp_settings_page() {
 
     $icons = array(
         'Posts' => '📝', 'Pages' => '📄', 'Content' => '🗂️', 'Taxonomy' => '🏷️', 'Comments' => '💬',
-        'Media' => '🖼️', 'Users' => '👥', 'Search' => '🔍', 'Menus' => '🧭', 'Site' => '🌐', 'History' => '↩️',
+        'Media' => '🖼️', 'Users' => '👥', 'Search' => '🔍', 'Menus' => '🧭', 'Site' => '🌐', 'Performance' => '🚀', 'SEO' => '📈', 'History' => '↩️',
         'Design' => '🎨', 'Site Editor' => '🖌️', 'GeneratePress' => '🧱', 'Code Snippets' => '🧩',
         'Elementor' => '⚡', 'Advanced' => '🛠️',
     );

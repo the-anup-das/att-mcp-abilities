@@ -564,6 +564,14 @@ function att_mcp_execute_elementor_update_element( $input ) {
     if ( is_wp_error( $data ) ) {
         return $data;
     }
+    $element = att_mcp_elementor_find_by_id( $data, $element_id );
+    if ( null === $element ) {
+        return new WP_Error( 'att_mcp_not_found', 'Element not found.' );
+    }
+    $settings = att_mcp_unredact_deep( $settings, isset( $element['settings'] ) && is_array( $element['settings'] ) ? $element['settings'] : array() );
+    if ( att_mcp_contains_redacted( $settings ) ) {
+        return att_mcp_redacted_error();
+    }
     if ( ! att_mcp_elementor_update_by_id( $data, $element_id, $settings ) ) {
         return new WP_Error( 'att_mcp_not_found', 'Element not found.' );
     }
@@ -753,6 +761,10 @@ function att_mcp_execute_elementor_update_kit( $input ) {
 
     $current = get_post_meta( $kit, '_elementor_page_settings', true );
     $current = is_array( $current ) ? $current : array();
+    $changes = att_mcp_unredact_deep( $changes, $current );
+    if ( att_mcp_contains_redacted( $changes ) ) {
+        return att_mcp_redacted_error();
+    }
     $change  = att_mcp_snapshot( 'post_meta', array( $kit, '_elementor_page_settings' ), 'Elementor kit: ' . implode( ', ', array_keys( $changes ) ) );
 
     update_post_meta( $kit, '_elementor_page_settings', wp_slash( array_merge( $current, att_mcp_filter_untrusted( $changes ) ) ) );

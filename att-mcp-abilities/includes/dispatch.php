@@ -63,6 +63,13 @@ function att_mcp_dispatch( $key, $callback, $input ) {
             att_mcp_audit_log( $key, $access, $input, $limited, 0 );
             return $limited;
         }
+        // A redaction placeholder written back would overwrite the real secret.
+        // Only abilities that restore the stored value (att_mcp_unredact_deep) may receive one.
+        if ( ! in_array( $key, att_mcp_unredacting_abilities(), true ) && att_mcp_contains_redacted( $input ) ) {
+            $error = att_mcp_redacted_error();
+            att_mcp_audit_log( $key, $access, $input, $error, 0 );
+            return $error;
+        }
     }
 
     do_action( 'att_mcp_before_execute', $key, $input, $access );
@@ -200,6 +207,11 @@ function att_mcp_is_secret_name( $name ) {
     return (bool) preg_match( att_mcp_secret_pattern(), (string) $name );
 }
 
+/** The placeholder that replaces secret values in everything returned to an agent. */
+function att_mcp_redaction_marker() {
+    return '***redacted***';
+}
+
 /** Recursively mask values whose KEY looks secret (safe: only secret-named keys). */
 function att_mcp_redact_deep( $data, $depth = 0 ) {
     if ( $depth > 12 || ! is_array( $data ) ) {
@@ -208,7 +220,7 @@ function att_mcp_redact_deep( $data, $depth = 0 ) {
     $out = array();
     foreach ( $data as $k => $v ) {
         if ( is_string( $k ) && att_mcp_is_secret_name( $k ) && ! is_array( $v ) ) {
-            $out[ $k ] = '***redacted***';
+            $out[ $k ] = att_mcp_redaction_marker();
         } elseif ( is_array( $v ) ) {
             $out[ $k ] = att_mcp_redact_deep( $v, $depth + 1 );
         } else {
@@ -216,6 +228,50 @@ function att_mcp_redact_deep( $data, $depth = 0 ) {
         }
     }
     return $out;
+}
+
+/** Does a value contain the redaction placeholder anywhere? */
+function att_mcp_contains_redacted( $data, $depth = 0 ) {
+    if ( is_string( $data ) ) {
+        return false !== strpos( $data, att_mcp_redaction_marker() );
+    }
+    if ( ! is_array( $data ) || $depth > 24 ) {
+        return false;
+    }
+    foreach ( $data as $v ) {
+        if ( att_mcp_contains_redacted( $v, $depth + 1 ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * An agent that read a structure (redacted) and writes it back sends the
+ * placeholder where a secret was. Put the stored value back at those paths.
+ */
+function att_mcp_unredact_deep( $new, $old, $depth = 0 ) {
+    if ( $new === att_mcp_redaction_marker() ) {
+        return is_scalar( $old ) ? $old : $new;
+    }
+    if ( ! is_array( $new ) || ! is_array( $old ) || $depth > 24 ) {
+        return $new;
+    }
+    foreach ( $new as $k => $v ) {
+        if ( array_key_exists( $k, $old ) ) {
+            $new[ $k ] = att_mcp_unredact_deep( $v, $old[ $k ], $depth + 1 );
+        }
+    }
+    return $new;
+}
+
+/** Write abilities that restore redacted values from the stored structure before writing. */
+function att_mcp_unredacting_abilities() {
+    return array( 'att/update-option', 'att/set-theme-mod', 'att/update-generatepress-settings', 'att/elementor-update-element', 'att/elementor-update-kit' );
+}
+
+function att_mcp_redacted_error() {
+    return new WP_Error( 'att_mcp_redacted_value', 'The input contains "' . att_mcp_redaction_marker() . '", a placeholder for a secret this server never reveals. Writing it would destroy the real value: send the real value, or leave that key out.' );
 }
 
 /* ----- Audit log ----------------------------------------------------------- */

@@ -31,10 +31,10 @@ function att_mcp_addons() {
     $addons = array(
         'core' => array(
             'label'       => __( 'Core WordPress', 'att-mcp-abilities' ),
-            'description' => __( 'Posts, pages, any content type, taxonomy, comments, media, users, search, menus, site settings, and change history (undo). Always available.', 'att-mcp-abilities' ),
+            'description' => __( 'Posts, pages, any content type, taxonomy, comments, media, users, search, menus, site settings, performance, SEO, and change history (undo). Always available.', 'att-mcp-abilities' ),
             'detect'      => '__return_true',
             'core'        => true, // always on; cannot be disabled
-            'groups'      => array( 'Posts', 'Pages', 'Content', 'Taxonomy', 'Comments', 'Media', 'Users', 'Search', 'Menus', 'Site', 'History' ),
+            'groups'      => array( 'Posts', 'Pages', 'Content', 'Taxonomy', 'Comments', 'Media', 'Users', 'Search', 'Menus', 'Site', 'Performance', 'SEO', 'History' ),
         ),
         'design' => array(
             'label'       => __( 'Design & Theme (generic)', 'att-mcp-abilities' ),

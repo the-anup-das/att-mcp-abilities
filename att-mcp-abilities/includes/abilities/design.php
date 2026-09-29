@@ -199,82 +199,16 @@ function att_mcp_execute_get_active_theme( $input ) {
     );
 }
 
-/** Is the URL on this site's own host? */
-function att_mcp_is_own_url( $url ) {
-    $site_host   = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
-    $target_host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
-    return '' !== $site_host && $site_host === $target_host && (bool) preg_match( '#^https?://#i', $url );
-}
-
 function att_mcp_execute_render_page( $input ) {
-    $url     = '';
-    $as_user = false;
-    if ( ! empty( $input['id'] ) ) {
-        $post = get_post( (int) $input['id'] );
-        if ( ! $post ) {
-            return new WP_Error( 'att_mcp_no_post', 'No post/page found for that id.' );
-        }
-        if ( 'publish' === $post->post_status && is_post_publicly_viewable( $post ) && ! post_password_required( $post ) ) {
-            $url = get_permalink( $post );
-        } else {
-            // Drafts, private and pending items render as a preview for the current user.
-            if ( ! current_user_can( 'edit_post', $post->ID ) ) {
-                return new WP_Error( 'att_mcp_forbidden', 'You are not allowed to preview this item.' );
-            }
-            $url     = get_preview_post_link( $post );
-            $as_user = true;
-        }
-    } elseif ( ! empty( $input['url'] ) ) {
-        $url = esc_url_raw( (string) $input['url'] );
+    $target = ! empty( $input['id'] ) ? (int) $input['id'] : ( ! empty( $input['url'] ) ? (string) $input['url'] : '' );
+    $max    = att_mcp_int_arg( $input, 'max_kb', 160, 10, 1000 ) * 1024;
+    // Drafts, private and pending items render as a preview for the current user (see att_mcp_fetch_own_page()).
+    $page = att_mcp_fetch_own_page( $target, $max + 1024 );
+    if ( is_wp_error( $page ) ) {
+        return $page;
     }
 
-    if ( empty( $url ) ) {
-        return new WP_Error( 'att_mcp_no_target', 'Provide a post "id" or an on-site "url".' );
-    }
-    // SSRF guard: only this site.
-    if ( ! att_mcp_is_own_url( $url ) ) {
-        return new WP_Error( 'att_mcp_offsite', 'URL must be on this site. Use att/fetch-url for other sites.' );
-    }
-
-    $max   = att_mcp_int_arg( $input, 'max_kb', 160, 10, 1000 ) * 1024;
-    $args  = array( 'timeout' => 20, 'redirection' => 0, 'limit_response_size' => $max + 1024 );
-    $token = '';
-    if ( $as_user ) {
-        // A short-lived login session for the preview request only, sent solely to
-        // this site's own host and destroyed as soon as the page has been fetched.
-        $user_id         = get_current_user_id();
-        $expiration      = time() + 2 * MINUTE_IN_SECONDS;
-        $sessions        = WP_Session_Tokens::get_instance( $user_id );
-        $token           = $sessions->create( $expiration );
-        $args['cookies'] = array( LOGGED_IN_COOKIE => wp_generate_auth_cookie( $user_id, $expiration, 'logged_in', $token ) );
-    }
-
-    $resp = null;
-    for ( $hop = 0; $hop <= 3; $hop++ ) {
-        $resp = wp_safe_remote_get( $url, $args );
-        if ( is_wp_error( $resp ) ) {
-            break;
-        }
-        $code = (int) wp_remote_retrieve_response_code( $resp );
-        $next = ( $code >= 300 && $code < 400 ) ? wp_remote_retrieve_header( $resp, 'location' ) : '';
-        $next = is_array( $next ) ? end( $next ) : $next;
-        if ( ! $next ) {
-            break;
-        }
-        $next = WP_Http::make_absolute_url( $next, $url );
-        if ( ! att_mcp_is_own_url( $next ) ) {
-            break; // never follow (or send the preview cookie) off-site
-        }
-        $url = $next;
-    }
-    if ( $token ) {
-        $sessions->destroy( $token );
-    }
-    if ( is_wp_error( $resp ) ) {
-        return $resp;
-    }
-
-    $body = (string) wp_remote_retrieve_body( $resp );
+    $body = $page['body'];
     if ( ! empty( $input['strip_scripts'] ) ) {
         $body = preg_replace( '#<script\b[^>]*>.*?</script>#is', '', $body );
     }
@@ -284,9 +218,9 @@ function att_mcp_execute_render_page( $input ) {
     }
 
     return array(
-        'url'       => $url,
-        'status'    => (int) wp_remote_retrieve_response_code( $resp ),
-        'preview'   => $as_user,
+        'url'       => $page['url'],
+        'status'    => $page['status'],
+        'preview'   => $page['preview'],
         'length'    => strlen( $body ),
         'truncated' => $trunc,
         'html'      => $body,
@@ -414,8 +348,13 @@ function att_mcp_execute_set_theme_mod( $input ) {
         return new WP_Error( 'att_mcp_no_value', 'A "value" is required.' );
     }
 
+    $value = att_mcp_unredact_deep( $input['value'], get_theme_mod( $key ) );
+    if ( att_mcp_contains_redacted( $value ) ) {
+        return att_mcp_redacted_error();
+    }
+
     $change_id = att_mcp_snapshot( 'theme_mod', $key, 'Theme mod ' . $key );
-    set_theme_mod( $key, att_mcp_filter_untrusted( $input['value'] ) );
+    set_theme_mod( $key, att_mcp_filter_untrusted( $value ) );
 
     return array(
         'updated'   => true,
@@ -454,8 +393,13 @@ function att_mcp_execute_update_option( $input ) {
         return new WP_Error( 'att_mcp_protected', 'That option is protected and cannot be changed via MCP.' );
     }
 
+    $value = att_mcp_unredact_deep( $input['value'], get_option( $name, null ) );
+    if ( att_mcp_contains_redacted( $value ) ) {
+        return att_mcp_redacted_error();
+    }
+
     $change_id = att_mcp_snapshot( 'option', $name, 'Option ' . $name );
-    $updated   = update_option( $name, att_mcp_filter_untrusted( $input['value'] ) );
+    $updated   = update_option( $name, att_mcp_filter_untrusted( $value ) );
 
     return array(
         'updated'   => (bool) $updated, // false if the value was identical (no-op) or on failure

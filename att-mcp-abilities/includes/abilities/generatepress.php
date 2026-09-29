@@ -209,6 +209,10 @@ function att_mcp_execute_update_generatepress_settings( $input ) {
     if ( ! is_array( $current ) ) {
         $current = array();
     }
+    $clean = att_mcp_unredact_deep( $clean, $current );
+    if ( att_mcp_contains_redacted( $clean ) ) {
+        return att_mcp_redacted_error();
+    }
 
     $change_id = att_mcp_snapshot( 'option', 'generate_settings', 'GeneratePress settings: ' . implode( ', ', array_keys( $clean ) ) );
 

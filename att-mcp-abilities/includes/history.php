@@ -7,9 +7,11 @@
  * att/undo-change later restores those values (and records the values it
  * replaced, so an undo can itself be undone).
  *
- * Covered: options, theme mods, Additional CSS, and post meta (incl. Elementor
- * data and kit settings). Post/page/template content is covered by core
- * revisions instead (att/list-revisions, att/restore-revision).
+ * Covered: options, option autoload flags, theme mods, Additional CSS, post meta
+ * (incl. Elementor data and kit settings, SEO plugin fields), All in One SEO
+ * post data, and LiteSpeed Cache / Super Page Cache settings (restored through
+ * each plugin's own settings API). Post/page/template content is covered by
+ * core revisions instead (att/list-revisions, att/restore-revision).
  *
  * Stored in {$wpdb->prefix}att_mcp_changes; the newest 50 changes are kept and
  * a single change larger than 1 MB is not recorded (the write still happens).
@@ -55,6 +57,10 @@ function att_mcp_current_ability( $set = null ) {
  *   theme_mod   target = theme mod key (active theme)
  *   post_meta   target = array( post_id, meta_key )
  *   custom_css  target = theme stylesheet slug
+ *   option_autoload  target = option name (value = autoloaded or not)
+ *   litespeed_conf   target = list of LiteSpeed Cache setting ids
+ *   spc_settings     target = list of Super Page Cache setting keys
+ *   aioseo_post      target = post id (All in One SEO title, description, …)
  */
 function att_mcp_capture( $type, $target ) {
     switch ( $type ) {
@@ -63,6 +69,18 @@ function att_mcp_capture( $type, $target ) {
             $value   = get_option( (string) $target, $missing );
             $existed = ( $value !== $missing );
             return array( 'type' => 'option', 'target' => (string) $target, 'existed' => $existed, 'value' => $existed ? $value : null );
+
+        case 'option_autoload':
+            $missing = new stdClass();
+            $existed = ( get_option( (string) $target, $missing ) !== $missing );
+            return array( 'type' => 'option_autoload', 'target' => (string) $target, 'existed' => $existed, 'value' => $existed && array_key_exists( (string) $target, wp_load_alloptions() ) );
+
+        case 'litespeed_conf':
+        case 'spc_settings':
+        case 'aioseo_post':
+            // Plugin-backed state: captured and restored through the plugin's own API.
+            $fn = 'att_mcp_capture_' . $type;
+            return function_exists( $fn ) ? call_user_func( $fn, $target ) : null;
 
         case 'theme_mod':
             $mods    = get_theme_mods();
@@ -140,7 +158,13 @@ function att_mcp_recent_changes( $limit = 20 ) {
 function att_mcp_can_restore_item( $item ) {
     switch ( isset( $item['type'] ) ? $item['type'] : '' ) {
         case 'option':
+        case 'option_autoload':
             return current_user_can( 'manage_options' ) && ! att_mcp_is_protected_option( $item['target'] );
+        case 'litespeed_conf':
+        case 'spc_settings':
+            return current_user_can( 'manage_options' ) && function_exists( 'att_mcp_restore_' . $item['type'] );
+        case 'aioseo_post':
+            return current_user_can( 'edit_post', (int) $item['target'] ) && function_exists( 'att_mcp_restore_aioseo_post' );
         case 'theme_mod':
             return current_user_can( 'edit_theme_options' );
         case 'custom_css':
@@ -165,6 +189,21 @@ function att_mcp_restore_item( $item ) {
             }
             if ( 'generate_settings' === $item['target'] && function_exists( 'att_mcp_gp_refresh_css' ) ) {
                 att_mcp_gp_refresh_css();
+            }
+            break;
+
+        case 'option_autoload':
+            if ( $existed ) {
+                wp_set_option_autoload( $item['target'], (bool) $value );
+            }
+            break;
+
+        case 'litespeed_conf':
+        case 'spc_settings':
+        case 'aioseo_post':
+            $result = call_user_func( 'att_mcp_restore_' . $item['type'], $item );
+            if ( is_wp_error( $result ) ) {
+                return $result;
             }
             break;
 

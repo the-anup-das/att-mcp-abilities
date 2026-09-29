@@ -14,4 +14,5 @@ node_modules/
 /tests/e2e/wordpress/
 /tests/e2e/app-password.txt
 /tests/e2e/server.log
+/tests/e2e/server-integrations.log
 /tests/e2e/*.part

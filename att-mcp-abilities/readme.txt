@@ -1,10 +1,10 @@
 === ATT MCP Abilities ===
 Contributors: your-wordpress-org-username
-Tags: mcp, ai, abilities api, automation, site builder
+Tags: mcp, ai, abilities api, seo, performance
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.9.0
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,6 +22,9 @@ You decide exactly what an agent may do. Every ability is a separate toggle, all
 * **Site building** — site title, tagline, homepage and blog page, permalinks, site icon, logo, timezone, and formats.
 * **Menus** — create, edit (add, remove, reorder, nest), and assign navigation menus.
 * **Media** — upload from a URL, raw SVG (sanitized), or base64, and edit alt text and captions.
+* **Performance** — find what slows the site down (server, database, autoloaded options, cron, cache plugins and a real page load, with prioritised fixes), run Google PageSpeed Insights, clean up the database, stop large options from autoloading, and create missing image sizes.
+* **Cache plugins** — read and change the settings of LiteSpeed Cache (including its presets) and Super Page Cache through each plugin's own settings API, with recommendations that take your server into account. Credentials are never exposed.
+* **SEO** — analyse a post on its rendered page (title, meta description, focus keyword, headings, images, links, readability) with concrete fixes and internal-link suggestions, audit many posts at once, and set the SEO title, description, focus keyword, canonical URL and indexing in Yoast SEO, Rank Math, All in One SEO or SEOPress.
 * **Design** — Additional CSS, theme mods, plugin/theme options, rendering a page (drafts too), studying a public reference site, and purging caches.
 * **Block themes** — templates, template parts (header, footer), and global styles (colors, typography, spacing).
 * **GeneratePress** — settings with automatic CSS regeneration, and GeneratePress Elements.
@@ -32,10 +35,10 @@ You decide exactly what an agent may do. Every ability is a separate toggle, all
 **Safety built in**
 
 * **Master switch** and **read-only mode** — turn everything off, or pause all writes, in one click.
-* **Undo** — options, theme mods, Additional CSS, site settings, menu locations, builder layouts and post meta are snapshotted before each change; content, templates and global styles keep WordPress revisions. Agents can list and undo changes.
+* **Undo** — options, theme mods, Additional CSS, site settings, menu locations, builder layouts, post meta, SEO fields, cache-plugin settings and option autoloading are snapshotted before each change; content, templates and global styles keep WordPress revisions. Agents can list and undo changes.
 * **Audit log** — every call is recorded (inputs redacted) under MCP › Activity, with an optional daily email summary.
 * **Rate limit** — a per-user cap on write calls per minute stops a runaway agent.
-* **Secret redaction** — secret-looking values are masked in every response and log entry; secret-like and core options are blocked.
+* **Secret redaction** — secret-looking values are masked in every response and log entry, and a masked placeholder can never be written back over the real secret; secret-like and core options are blocked.
 * **PHP is off by default** — PHP snippets and PHP-executing GeneratePress hooks need an administrator-only switch, and are always off when `DISALLOW_FILE_EDIT` is set.
 * **Per-object permissions** — every write checks the WordPress capability for that specific post, term, comment, or file.
 * **SSRF protection** — URL fetches only reach public addresses, re-checked on every redirect.
@@ -78,6 +81,14 @@ Enable the **History & undo** abilities and ask the agent to "undo the last chan
 
 The REST tools refuse user, application-password, plugin and settings routes, the option tools refuse core and security options, and this plugin and MCP Adapter cannot be deactivated through MCP. Beyond that an agent can only do what the connected WordPress user may do.
 
+= Which cache and SEO plugins are supported? =
+
+Cache settings can be read and changed for **LiteSpeed Cache** and **Super Page Cache**; other cache plugins are detected and purged. SEO fields can be written to **Yoast SEO**, **Rank Math**, **All in One SEO** (4.9.8 or later) and **SEOPress**. The performance audit and the post analysis work without any of them.
+
+= Does PageSpeed Insights need an API key? =
+
+No, but Google's shared quota for keyless requests is small. Create a free key for the PageSpeed Insights API in the Google Cloud console and add `define( 'ATT_MCP_PSI_API_KEY', 'your-key' );` to wp-config.php. The site must be reachable from the internet for Google to test it.
+
 = Is anything sent to third parties? =
 
 Only what you trigger — see "External services" below. The plugin has no tracking and no phone-home.
@@ -98,7 +109,9 @@ This plugin does not contact any service by itself. Outbound requests happen onl
 
 * **WordPress.org plugin and theme directories** (api.wordpress.org, downloads.wordpress.org) — only when the "Install / Activate Plugins" or "Install / Activate Themes" ability is used, to look up and download the requested plugin or theme. The request contains the plugin/theme slug and the standard WordPress user agent (WordPress version and your site URL). [WordPress.org privacy policy](https://wordpress.org/about/privacy/).
 * **Any public URL an agent asks for** — the "Upload Media" ability (URL source) downloads the file at that URL, and "Fetch Reference URL" downloads the page (and optionally its stylesheets) so the agent can study it. The request contains the standard WordPress user agent (WordPress version and your site URL). Requests to private, loopback, and reserved addresses are blocked. The privacy policy of whichever site you point it at applies.
-* **Your own site** — "Render Page HTML" requests pages from this same site so the agent can check its work.
+* **Google PageSpeed Insights** (www.googleapis.com) — only when the "PageSpeed Insights" ability is used. The URL of the page being tested (a page of this site), the chosen strategy (mobile or desktop) and categories, and your API key if you set one are sent to Google, which then loads that page to measure it. [Google Privacy Policy](https://policies.google.com/privacy), [Google APIs Terms of Service](https://developers.google.com/terms).
+* **Your own site** — "Render Page HTML", "Audit Performance" and "Analyze Post SEO" request pages from this same site to check the result.
+* **Cache plugin services** — changing LiteSpeed Cache or Super Page Cache settings runs that plugin's own save routine, which may contact the plugin's own services (QUIC.cloud, Cloudflare) exactly as saving the settings in its admin screen would, if you have connected them.
 
 The connection snippets on the Connect screen run the `@automattic/mcp-wordpress-remote` package from npm on your own computer; this plugin never contacts npm.
 
@@ -107,6 +120,16 @@ The connection snippets on the Connect screen run the `@automattic/mcp-wordpress
 The audit log (MCP › Activity) stores, in your own database, the time, ability name, user ID, status, duration, and the call inputs with secret-looking values redacted — the newest 500 entries. The change history stores the previous values of settings an agent changed — the newest 50 changes. If you enable the daily summary, a list of write calls is emailed to the site's admin address. Everything is deleted when you uninstall the plugin.
 
 == Changelog ==
+
+= 1.10.0 =
+* New: Performance — "Audit Performance" finds what slows the site down (server, database, autoloaded options, cron, cache plugins and a real page load: response times, page-cache hits, compression, render-blocking scripts and styles, image weight and formats, lazy-loading, third-party hosts) and returns prioritised fixes.
+* New: "PageSpeed Insights" — Lighthouse scores, lab metrics, real-user Core Web Vitals, the LCP element and the biggest opportunities from Google PageSpeed Insights.
+* New: Cache configuration — read and change LiteSpeed Cache settings (and apply its presets) and Super Page Cache settings through each plugin's own API, with recommendations; credentials are never exposed. Undoable.
+* New: "Optimize Database" (revisions, auto-drafts, spam/trash, expired transients, orphaned meta; dry run by default), "Set Option Autoload" (undoable) and "Regenerate Thumbnails".
+* New: SEO — "Analyze Post SEO" (on-page SEO and readability checks on the rendered page, with a score, fixes and internal-link suggestions), "SEO Audit" (many posts plus site-wide checks) and "Update SEO Meta" for Yoast SEO, Rank Math, All in One SEO and SEOPress (undoable).
+* New: The SEO tools warn when an SEO plugin is installed but not outputting anything (Rank Math before its setup wizard, SEOPress with Titles & Metas off).
+* Security: A redacted placeholder ("***redacted***") sent back by an agent can no longer overwrite the real secret — the stored value is kept, or the write is refused.
+* Security: Secret detection now also covers Cloudflare API tokens, object-cache passwords, the QUIC.cloud private key and "credential" names.
 
 = 1.9.0 =
 * New: Generate and revoke Application Passwords from MCP › Connect; the password is filled into every client configuration automatically. Added a Claude Code configuration.
@@ -134,6 +157,9 @@ The audit log (MCP › Activity) stores, in your own database, the time, ability
 * Addon framework, MCP Controls (kill switch, read-only mode, audit log), secret redaction, and the Activity screen.
 
 == Upgrade Notice ==
+
+= 1.10.0 =
+New performance, cache-configuration and SEO abilities (all off by default) and safer handling of redacted secrets.
 
 = 1.9.0 =
 Security hardening and many new site-building abilities. New abilities are off by default. PHP snippets now require the new "Allow PHP" control in MCP › Settings.

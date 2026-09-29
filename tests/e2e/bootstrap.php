@@ -29,6 +29,12 @@ require $att_wp_dir . '/wp-load.php';
 if ( ! empty( $att_admin ) ) {
 	require_once ABSPATH . 'wp-admin/includes/admin.php';
 }
+if ( empty( $att_installing ) ) {
+	// Abilities normally run inside a REST request (MCP Adapter), where the REST
+	// server — and MCP Adapter, which sets itself up on rest_api_init — starts
+	// before the abilities registry. Keep that order here.
+	rest_get_server();
+}
 
 add_action( 'doing_it_wrong_run', function ( $function, $message ) {
 	$GLOBALS['att_issues'][] = 'doing_it_wrong: ' . $function . ' — ' . wp_strip_all_tags( $message );

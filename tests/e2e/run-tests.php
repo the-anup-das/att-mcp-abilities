@@ -211,6 +211,178 @@ $r = t_run( 'att/render-page', array( 'url' => 'https://example.com/' ) );
 t_ok( 'render-page refuses other sites', 'att_mcp_offsite' === t_code( $r ), $r );
 
 /* ------------------------------------------------------------------ */
+t_section( 'Page analysis helpers' );
+$scan = att_mcp_scan_html( '<html lang="en"><head><title>T &amp; X</title><meta name="description" content="D"><link rel="stylesheet" href="/a.css"><script src="https://cdn.example.com/x.js"></script><script src="/y.js" defer></script><script type="application/ld+json">{}</script></head><body><h1>Main</h1><p>First <a href="/about/">About us</a> para.</p><h3>Skip</h3><img src="/wp-content/uploads/a.jpg" alt=""><img src="b.png" loading="lazy" width="10" height="10"><a href="https://other.org/" rel="nofollow"><img src="c.png" alt="Logo"></a><!-- Page cached by LiteSpeed Cache --></body></html>' );
+t_ok( 'scanner: title, meta, lang, JSON-LD', 'T & X' === $scan['title'] && 'D' === $scan['meta']['description'] && 'en' === $scan['lang'] && 1 === $scan['jsonld'], $scan );
+t_ok( 'scanner: render-blocking vs deferred scripts', 2 === count( $scan['scripts'] ) && $scan['scripts'][0]['blocking'] && 'cdn.example.com' === $scan['scripts'][0]['host'] && ! $scan['scripts'][1]['blocking'] && $scan['stylesheets'][0]['blocking'], $scan['scripts'] );
+t_ok( 'scanner: headings, links, image alts', array( 1, 3 ) === wp_list_pluck( $scan['headings'], 'level' ) && 'About us' === $scan['links'][0]['text'] && $scan['links'][0]['internal'] && '[image: Logo]' === $scan['links'][1]['text'] && $scan['links'][1]['nofollow'] && '' === $scan['images'][0]['alt'] && null === $scan['images'][1]['alt'], $scan['links'] );
+t_ok( 'scanner: paragraphs + cache-plugin marker', 'First About us para.' === $scan['paragraphs'][0] && in_array( 'html:litespeed-cache', att_mcp_page_cache_signals( array(), $scan['comments'] )['signals'], true ), $scan['paragraphs'] );
+$sig = att_mcp_page_cache_signals( array( 'x-wp-spc-disk-cache' => 'HIT', 'cache-control' => 'max-age=60' ), array() );
+t_ok( 'cache signals: hit header', true === $sig['hit'] && in_array( 'cache-control', $sig['signals'], true ), $sig );
+$stats = att_mcp_text_stats( str_repeat( 'The cat sat on the mat. ', 10 ), 'en_US' );
+t_ok( 'text stats + Flesch reading ease', 60 === $stats['words'] && 10 === $stats['sentences'] && $stats['flesch_reading_ease'] > 90, $stats );
+$file = att_mcp_local_file_for_url( wp_get_attachment_url( $media_id ) );
+t_ok( 'local file for an upload URL', '' !== $file && is_file( $file ), $file );
+t_ok( 'no local file through ../', '' === att_mcp_local_file_for_url( content_url( '/uploads/../../wp-config.php' ) ) );
+
+/* ------------------------------------------------------------------ */
+t_section( 'Performance (needs php -S on 127.0.0.1:8899)' );
+$r = t_run( 'att/audit-performance', array( 'id' => $post_id ) );
+t_ok( 'audit-performance', is_array( $r ) && isset( $r['server']['php_version'], $r['database']['autoload']['kb'], $r['page']['response_ms']['first'], $r['cron'] ) && 200 === $r['page']['status'], $r );
+t_ok( '... recommends a page cache on a bare site', is_array( $r ) && in_array( 'caching', wp_list_pluck( $r['recommendations'], 'area' ), true ), is_array( $r ) ? $r['recommendations'] : $r );
+t_ok( '... high priorities first', is_array( $r ) && 'high' === $r['recommendations'][0]['priority'] );
+$r = t_run( 'att/audit-performance', array( 'fetch' => false ) );
+t_ok( 'audit-performance without a page fetch', is_array( $r ) && ! isset( $r['page'] ) && isset( $r['database'] ), $r );
+$r = t_run( 'att/audit-performance', array( 'id' => $draft_id ) );
+t_ok( 'audit refuses unpublished pages', 'att_mcp_not_public' === t_code( $r ), $r );
+$r = t_run( 'att/audit-performance', array( 'url' => 'https://example.com/' ) );
+t_ok( 'audit refuses other sites', 'att_mcp_offsite' === t_code( $r ), $r );
+
+// PageSpeed Insights, with Google's response mocked.
+$psi = array(
+	'loadingExperience' => array( 'overall_category' => 'SLOW', 'metrics' => array(
+		'LARGEST_CONTENTFUL_PAINT_MS'   => array( 'percentile' => 4100, 'category' => 'SLOW' ),
+		'CUMULATIVE_LAYOUT_SHIFT_SCORE' => array( 'percentile' => 12, 'category' => 'AVERAGE' ),
+	) ),
+	'lighthouseResult'  => array(
+		'lighthouseVersion' => '12.0.0',
+		'categories'        => array(
+			'performance' => array( 'score' => 0.42, 'auditRefs' => array( array( 'id' => 'largest-contentful-paint', 'group' => 'metrics' ), array( 'id' => 'render-blocking-resources' ), array( 'id' => 'uses-optimized-images' ), array( 'id' => 'dom-size' ) ) ),
+			'seo'         => array( 'score' => 0.9, 'auditRefs' => array( array( 'id' => 'meta-description' ) ) ),
+		),
+		'audits'            => array(
+			'largest-contentful-paint'         => array( 'displayValue' => '4.1 s', 'score' => 0.2 ),
+			'render-blocking-resources'        => array( 'title' => 'Eliminate render-blocking resources', 'score' => 0.3, 'scoreDisplayMode' => 'metricSavings', 'details' => array( 'overallSavingsMs' => 1200, 'items' => array( array( 'url' => 'https://x.test/y.css', 'wastedMs' => 800.4 ) ) ) ),
+			'uses-optimized-images'            => array( 'title' => 'Efficiently encode images', 'score' => 0.5, 'scoreDisplayMode' => 'metricSavings', 'details' => array( 'overallSavingsMs' => 300, 'overallSavingsBytes' => 204800 ) ),
+			'dom-size'                         => array( 'title' => 'Avoid an excessive DOM size', 'score' => 0.95, 'scoreDisplayMode' => 'numeric' ),
+			'meta-description'                 => array( 'title' => 'Document does not have a meta description', 'score' => 0, 'scoreDisplayMode' => 'binary' ),
+			'largest-contentful-paint-element' => array( 'details' => array( 'items' => array( array( 'items' => array( array( 'node' => array( 'snippet' => '<img src="hero.jpg">', 'selector' => 'main > img' ) ) ) ) ) ) ),
+		),
+	),
+);
+$psi_url  = '';
+$psi_mock = function ( $pre, $args, $url ) use ( $psi, &$psi_url ) {
+	if ( false === strpos( $url, 'pagespeedonline' ) ) {
+		return $pre;
+	}
+	$psi_url = $url;
+	return array( 'headers' => array(), 'body' => wp_json_encode( $psi ), 'response' => array( 'code' => 200, 'message' => 'OK' ), 'cookies' => array(), 'filename' => null );
+};
+add_filter( 'pre_http_request', $psi_mock, 10, 3 );
+$r = t_run( 'att/pagespeed-insights', array( 'id' => $post_id, 'strategy' => 'desktop' ) );
+remove_filter( 'pre_http_request', $psi_mock, 10 );
+t_ok( 'pagespeed-insights: scores', is_array( $r ) && 42 === $r['scores']['performance'] && 90 === $r['scores']['seo'], $r );
+t_ok( '... field data (CLS scaled to 0.12)', is_array( $r ) && 'SLOW' === $r['field_data']['overall'] && 0.12 === $r['field_data']['cls']['p75'], is_array( $r ) ? $r['field_data'] : $r );
+t_ok( '... opportunities sorted by savings, passing audits left out', is_array( $r ) && 2 === count( $r['opportunities'] ) && 'render-blocking-resources' === $r['opportunities'][0]['id'] && 200 === $r['opportunities'][1]['savings_kb'], is_array( $r ) ? $r['opportunities'] : $r );
+t_ok( '... failing SEO audit and LCP element', is_array( $r ) && 'meta-description' === $r['failing_audits']['seo'][0]['id'] && 'main > img' === $r['lcp_element']['selector'], $r );
+t_ok( '... request carries the page URL, strategy and categories', false !== strpos( $psi_url, rawurlencode( get_permalink( $post_id ) ) ) && false !== strpos( $psi_url, 'strategy=desktop' ) && false !== strpos( $psi_url, 'category=PERFORMANCE&category=SEO' ), $psi_url );
+$r = t_run( 'att/pagespeed-insights', array( 'url' => 'https://example.com/' ) );
+t_ok( 'pagespeed-insights refuses other sites', 'att_mcp_offsite' === t_code( $r ), $r );
+
+// Database clean-up: revisions, spam, an expired transient, orphaned meta.
+for ( $i = 1; $i <= 6; $i++ ) {
+	wp_update_post( array( 'ID' => $post_id, 'post_content' => "<p>Body v{$i}</p>" ) );
+}
+$spam = wp_insert_comment( array( 'comment_post_ID' => $post_id, 'comment_content' => 'Buy now', 'comment_approved' => 'spam' ) );
+set_transient( 'att_e2e_expired', 'x', 60 );
+update_option( '_transient_timeout_att_e2e_expired', time() - 100 );
+$wpdb->insert( $wpdb->postmeta, array( 'post_id' => 987654, 'meta_key' => 'att_orphan', 'meta_value' => 'x' ) );
+$revs_before = count( wp_get_post_revisions( $post_id ) );
+$dry = t_run( 'att/optimize-database', array( 'keep_revisions' => 2 ) );
+t_ok( 'optimize-database dry run counts', is_array( $dry ) && $dry['dry_run'] && $dry['tasks']['revisions']['found'] >= 4 && $dry['tasks']['spam_comments']['found'] >= 1 && $dry['tasks']['expired_transients']['found'] >= 1 && $dry['tasks']['orphaned_meta']['found'] >= 1, $dry );
+t_ok( '... and deletes nothing', get_comment( $spam ) && count( wp_get_post_revisions( $post_id ) ) === $revs_before && false !== get_option( '_transient_timeout_att_e2e_expired' ) );
+$run = t_run( 'att/optimize-database', array( 'keep_revisions' => 2, 'dry_run' => false ) );
+t_ok( 'optimize-database deletes', is_array( $run ) && ! get_comment( $spam ) && 2 === count( wp_get_post_revisions( $post_id ) ) && false === get_option( '_transient_timeout_att_e2e_expired' ) && 0 === $run['tasks']['orphaned_meta']['remaining'], $run );
+t_ok( '... published content untouched', 'publish' === get_post_status( $post_id ) && 'publish' === get_post_status( $page_id ) );
+
+// Autoload.
+add_option( 'att_e2e_big_option', str_repeat( 'x', 5000 ), '', true );
+$r = t_run( 'att/set-option-autoload', array( 'options' => array( 'att_e2e_big_option', 'siteurl', 'att_e2e_no_such_option' ), 'autoload' => false ) );
+t_ok( 'set-option-autoload off', is_array( $r ) && 'updated' === $r['results']['att_e2e_big_option'] && 0 === strpos( $r['results']['siteurl'], 'refused' ) && 0 === strpos( $r['results']['att_e2e_no_such_option'], 'skipped' ) && ! array_key_exists( 'att_e2e_big_option', wp_load_alloptions( true ) ), $r );
+t_ok( '... value kept', str_repeat( 'x', 5000 ) === get_option( 'att_e2e_big_option' ) );
+$u = t_run( 'att/undo-change' );
+t_ok( 'undo autoload change', ! is_wp_error( $u ) && array_key_exists( 'att_e2e_big_option', wp_load_alloptions( true ) ), $u );
+
+// Thumbnails.
+$img = imagecreatetruecolor( 1600, 1000 );
+imagefill( $img, 0, 0, imagecolorallocate( $img, 30, 120, 200 ) );
+ob_start();
+imagejpeg( $img, null, 80 );
+$jpg = ob_get_clean();
+imagedestroy( $img );
+$up     = t_run( 'att/upload-media', array( 'filename' => 'big-photo.jpg', 'content_base64' => base64_encode( $jpg ), 'alt' => 'Big photo' ) );
+$big_id = is_array( $up ) ? (int) $up['id'] : 0;
+$meta   = wp_get_attachment_metadata( $big_id );
+$size   = is_array( $meta ) && ! empty( $meta['sizes'] ) ? key( $meta['sizes'] ) : '';
+if ( $size ) {
+	unset( $meta['sizes'][ $size ] );
+	wp_update_attachment_metadata( $big_id, $meta );
+}
+$r = t_run( 'att/regenerate-thumbnails', array( 'ids' => array( $big_id ) ) );
+t_ok( "regenerate-thumbnails recreates the missing '{$size}' size", '' !== $size && is_array( $r ) && in_array( $size, $r['results'][0]['created'], true ) && isset( wp_get_attachment_metadata( $big_id )['sizes'][ $size ] ), $r );
+$r = t_run( 'att/regenerate-thumbnails' );
+t_ok( '... auto-scan finds nothing left to do', is_array( $r ) && 0 === $r['processed'], $r );
+
+// Cache configuration with no cache plugin installed.
+$r = t_run( 'att/get-cache-config' );
+t_ok( 'get-cache-config with no cache plugin', is_array( $r ) && array() === $r['plugins'] && ! empty( $r['note'] ) && ! isset( $r['litespeed'] ), $r );
+$r = t_run( 'att/update-cache-config', array( 'plugin' => 'litespeed', 'settings' => array( 'cache' => true ) ) );
+t_ok( 'update-cache-config refuses an inactive plugin', 'att_mcp_plugin_inactive' === t_code( $r ), $r );
+
+/* ------------------------------------------------------------------ */
+t_section( 'SEO (no SEO plugin installed)' );
+$para = 'Choosing fresh coffee beans is the single biggest step toward better espresso at home. Roast date, origin and grind size all change the taste in the cup, and small changes make a big difference to every shot you pull. ';
+$body = '<!-- wp:paragraph --><p>' . $para . '</p><!-- /wp:paragraph -->'
+	. '<!-- wp:heading --><h2 class="wp-block-heading">How to store coffee beans</h2><!-- /wp:heading -->'
+	. '<!-- wp:paragraph --><p>' . str_repeat( 'Keep the bag sealed, away from light, heat and moisture, and buy only what you will use within a few weeks. ', 8 ) . '</p><!-- /wp:paragraph -->'
+	. '<!-- wp:heading --><h2 class="wp-block-heading">Grinding for espresso</h2><!-- /wp:heading -->'
+	. '<!-- wp:paragraph --><p>' . str_repeat( 'Grind right before brewing and adjust in small steps until the shot runs in about thirty seconds. ', 8 ) . ' Read our <a href="' . esc_url( get_permalink( $post_id ) ) . '">launch notes</a> or the <a href="https://en.wikipedia.org/wiki/Espresso">espresso history</a>.</p><!-- /wp:paragraph -->'
+	. '<!-- wp:image --><figure class="wp-block-image"><img src="' . esc_url( wp_get_attachment_url( $big_id ) ) . '"/></figure><!-- /wp:image -->';
+$seo_id = wp_insert_post( array( 'post_title' => 'Best Coffee Beans for Espresso', 'post_name' => 'best-coffee-beans', 'post_status' => 'publish', 'post_content' => $body ) );
+$r      = t_run( 'att/analyze-post', array( 'id' => $seo_id, 'focus_keyword' => 'coffee beans' ) );
+$status = is_array( $r ) ? wp_list_pluck( $r['checks'], 'status', 'id' ) : array();
+t_ok( 'analyze-post on the rendered page', is_array( $r ) && isset( $r['score'] ) && 200 === $r['rendered']['status'] && false !== strpos( $r['rendered']['title'], 'Best Coffee Beans' ), $r );
+t_ok( '... keyword in title, slug, intro and a subheading', 'pass' === ( $status['keyword_in_title'] ?? '' ) && 'pass' === ( $status['keyword_in_slug'] ?? '' ) && 'pass' === ( $status['keyword_in_intro'] ?? '' ) && 'pass' === ( $status['keyword_in_subheadings'] ?? '' ), $status );
+t_ok( '... no meta description without an SEO plugin', 'fail' === ( $status['description'] ?? '' ), $status );
+t_ok( '... image without alt found', 'fail' === ( $status['image_alt'] ?? '' ) && 1 === count( $r['images_without_alt'] ), $status );
+t_ok( '... internal and external links counted', is_array( $r ) && 1 === $r['stats']['internal_links'] && 1 === $r['stats']['external_links'], is_array( $r ) ? $r['stats'] : $r );
+t_ok( '... link suggestions never suggest the post itself', is_array( $r ) && ! in_array( $seo_id, wp_list_pluck( isset( $r['link_suggestions'] ) ? $r['link_suggestions'] : array(), 'id' ), true ) );
+$r = t_run( 'att/analyze-post', array( 'id' => $seo_id, 'render' => false ) );
+t_ok( 'analyze-post without rendering', is_array( $r ) && ! isset( $r['rendered'] ) && isset( $r['score'] ), $r );
+$r = t_run( 'att/seo-audit' );
+$row = null;
+foreach ( ( is_array( $r ) ? $r['posts'] : array() ) as $p ) {
+	if ( $seo_id === $p['id'] ) { $row = $p; }
+}
+t_ok( 'seo-audit', is_array( $r ) && $row && in_array( 'missing_description', $row['issues'], true ) && in_array( 'images_missing_alt', $row['issues'], true ) && isset( $r['summary']['missing_description'] ), $r );
+t_ok( '... site check: no SEO plugin', is_array( $r ) && false !== strpos( wp_json_encode( $r['site'] ), 'No SEO plugin' ), is_array( $r ) ? $r['site'] : $r );
+$r = t_run( 'att/update-seo-meta', array( 'id' => $seo_id, 'title' => 'x' ) );
+t_ok( 'update-seo-meta needs an SEO plugin', 'att_mcp_no_seo_plugin' === t_code( $r ), $r );
+$r = t_run( 'att/analyze-post', array( 'id' => $media_id ) );
+t_ok( 'analyze-post: attachment is analysed or refused cleanly', ! is_wp_error( $r ) || in_array( t_code( $r ), array( 'att_mcp_not_viewable' ), true ), $r );
+
+/* ------------------------------------------------------------------ */
+t_section( 'Secrets are never written back as placeholders' );
+update_option( 'att_e2e_cfg', array( 'cf_apitoken' => 'real-token', 'color' => 'red', 'nested' => array( 'client_secret' => 's3' ) ) );
+$g = t_run( 'att/get-option', array( 'name' => 'att_e2e_cfg' ) );
+t_ok( 'get-option masks cf_apitoken and nested secrets', is_array( $g ) && '***redacted***' === $g['value']['cf_apitoken'] && '***redacted***' === $g['value']['nested']['client_secret'] && 'red' === $g['value']['color'], $g );
+$v          = is_array( $g ) ? $g['value'] : array();
+$v['color'] = 'blue';
+$r          = t_run( 'att/update-option', array( 'name' => 'att_e2e_cfg', 'value' => $v ) );
+$now        = get_option( 'att_e2e_cfg' );
+t_ok( 'writing a redacted structure back keeps the real secrets', ! is_wp_error( $r ) && 'real-token' === $now['cf_apitoken'] && 's3' === $now['nested']['client_secret'] && 'blue' === $now['color'], $now );
+$r = t_run( 'att/update-option', array( 'name' => 'att_e2e_cfg', 'value' => array( 'new_api_key' => '***redacted***' ) ) );
+t_ok( 'a placeholder with nothing stored behind it is refused', 'att_mcp_redacted_value' === t_code( $r ), $r );
+$r = t_run( 'att/create-post', array( 'title' => 'x', 'content' => 'token: ***redacted***' ) );
+t_ok( 'other write abilities refuse the placeholder', 'att_mcp_redacted_value' === t_code( $r ), $r );
+foreach ( array( 'litespeed.conf.object-pswd', 'litespeed.conf.cdn-cloudflare_key', 'litespeed.cloud._summary.sk_b64', 'swcfpc_cf_apitoken', 'my_credentials' ) as $name ) {
+	$r = t_run( 'att/get-option', array( 'name' => $name ) );
+	t_ok( "get-option refuses {$name}", 'att_mcp_protected' === t_code( $r ), $r );
+}
+$red = att_mcp_redact_deep( array( 'sk_b64' => 'k', 'pk_b64' => 'public', 'cf_apitoken' => 't', 'cf_email' => 'e@x.test' ) );
+t_ok( 'redaction covers QUIC.cloud and Cloudflare keys', '***redacted***' === $red['sk_b64'] && '***redacted***' === $red['cf_apitoken'] && 'public' === $red['pk_b64'], $red );
+
+/* ------------------------------------------------------------------ */
 t_section( 'Site Editor (block theme: ' . get_stylesheet() . ')' );
 $r = t_run( 'att/get-block-templates' );
 t_ok( 'get-block-templates', is_array( $r ) && ! empty( $r['templates']['wp_template'] ) && ! empty( $r['templates']['wp_template_part'] ), $r );

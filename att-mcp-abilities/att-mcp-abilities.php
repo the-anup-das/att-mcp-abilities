@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       ATT MCP Abilities
  * Plugin URI:        https://github.com/the-anup-das/att-mcp-abilities
- * Description:      Lets AI agents (Claude, Cursor, Codex…) read and — only where you allow it — build and edit your site through the WordPress Abilities API and MCP Adapter, with per-ability toggles, read-only mode, undo, and an audit log.
- * Version:           1.9.0
+ * Description:      Lets AI agents (Claude, Cursor, Codex…) read and — only where you allow it — build, edit, speed up and optimise (SEO) your site through the WordPress Abilities API and MCP Adapter, with per-ability toggles, read-only mode, undo, and an audit log.
+ * Version:           1.10.0
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            ATT
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'ATT_MCP_VERSION', '1.9.0' );
+define( 'ATT_MCP_VERSION', '1.10.0' );
 define( 'ATT_MCP_FILE', __FILE__ );
 define( 'ATT_MCP_OPTION', 'att_mcp_abilities' );
 define( 'ATT_MCP_ADDONS_OPTION', 'att_mcp_addons' );
@@ -25,6 +25,7 @@ define( 'ATT_MCP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ATT_MCP_URL', plugin_dir_url( __FILE__ ) );
 
 require_once ATT_MCP_DIR . 'includes/helpers.php';
+require_once ATT_MCP_DIR . 'includes/analysis.php';
 require_once ATT_MCP_DIR . 'includes/registry.php';
 require_once ATT_MCP_DIR . 'includes/addons.php';
 require_once ATT_MCP_DIR . 'includes/dispatch.php';
@@ -44,6 +45,9 @@ require_once ATT_MCP_DIR . 'includes/abilities/search.php';
 require_once ATT_MCP_DIR . 'includes/abilities/site.php';
 require_once ATT_MCP_DIR . 'includes/abilities/menus.php';
 require_once ATT_MCP_DIR . 'includes/abilities/history.php';
+require_once ATT_MCP_DIR . 'includes/abilities/performance.php';
+require_once ATT_MCP_DIR . 'includes/abilities/cache-config.php';
+require_once ATT_MCP_DIR . 'includes/abilities/seo.php';
 require_once ATT_MCP_DIR . 'includes/abilities/design.php';
 require_once ATT_MCP_DIR . 'includes/abilities/site-editor.php';
 require_once ATT_MCP_DIR . 'includes/abilities/snippets.php';
@@ -81,6 +85,9 @@ function att_mcp_register_all_abilities() {
     att_mcp_register_site_abilities();
     att_mcp_register_menus_abilities();
     att_mcp_register_history_abilities();
+    att_mcp_register_performance_abilities();
+    att_mcp_register_cache_config_abilities();
+    att_mcp_register_seo_abilities();
     att_mcp_register_design_abilities();
     att_mcp_register_site_editor_abilities();
     att_mcp_register_snippets_abilities();

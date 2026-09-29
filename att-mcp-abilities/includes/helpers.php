@@ -116,9 +116,13 @@ function att_mcp_filter_untrusted( $value ) {
 
 /* ----- Protected options & meta ------------------------------------------- */
 
-/** Shared secret-key pattern (see also att_mcp_is_secret_name() in dispatch.php). */
+/**
+ * Shared secret-key pattern (see also att_mcp_is_secret_name() in dispatch.php).
+ * Also covers names like cf_apitoken (Cloudflare), object-pswd (LiteSpeed object
+ * cache) and sk_b64 (the QUIC.cloud private key in LiteSpeed's cloud summary).
+ */
 function att_mcp_secret_pattern() {
-    return '/(secret|password|passwd|_pwd|_key$|_token|_salt|nonce|smtp|private[_-]?key|client[_-]?secret|api[_-]?key|auth[_-]?key|license)/i';
+    return '/(secret|password|passwd|pswd|_pwd|(^|[_-])pass$|_key$|_token|apitoken|token$|_salt|nonce|smtp|private[_-]?key|client[_-]?secret|api[_-]?key|auth[_-]?key|license|credential|sk_b64)/i';
 }
 
 /**
@@ -238,6 +242,113 @@ function att_mcp_safe_fetch( $url, $max_bytes = 5242880 ) {
         return $resp;
     }
     return new WP_Error( 'att_mcp_too_many_redirects', 'Too many redirects.' );
+}
+
+/* ----- Fetching this site's own pages -------------------------------------- */
+
+/** Is the URL on this site's own host? */
+function att_mcp_is_own_url( $url ) {
+    $site_host   = strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) );
+    $target_host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+    return '' !== $site_host && $site_host === $target_host && (bool) preg_match( '#^https?://#i', $url );
+}
+
+/**
+ * Fetch a page of THIS site. $target is a post (WP_Post or ID) or an on-site URL.
+ *
+ * Unpublished, private and password-protected posts are fetched as a logged-in
+ * preview for the current user: a 2-minute login session sent only to this
+ * site's own host and destroyed as soon as the page has been fetched. Same-host
+ * redirects are followed (max 3); off-site redirects are never followed.
+ *
+ * Returns array( url, status, headers, body, preview, ms ) or WP_Error.
+ */
+function att_mcp_fetch_own_page( $target, $max_bytes = 1048576 ) {
+    $url     = '';
+    $as_user = false;
+    if ( $target instanceof WP_Post || ( is_numeric( $target ) && (int) $target > 0 ) ) {
+        $post = get_post( $target );
+        if ( ! $post ) {
+            return new WP_Error( 'att_mcp_no_post', 'No post/page found for that id.' );
+        }
+        if ( 'publish' === $post->post_status && is_post_publicly_viewable( $post ) && ! post_password_required( $post ) ) {
+            $url = get_permalink( $post );
+        } else {
+            if ( ! current_user_can( 'edit_post', $post->ID ) ) {
+                return new WP_Error( 'att_mcp_forbidden', 'You are not allowed to preview this item.' );
+            }
+            $url     = get_preview_post_link( $post );
+            $as_user = true;
+        }
+    } elseif ( is_string( $target ) && '' !== $target ) {
+        $url = esc_url_raw( $target );
+    }
+
+    if ( empty( $url ) ) {
+        return new WP_Error( 'att_mcp_no_target', 'Provide a post "id" or an on-site "url".' );
+    }
+    // SSRF guard: only this site.
+    if ( ! att_mcp_is_own_url( $url ) ) {
+        return new WP_Error( 'att_mcp_offsite', 'URL must be on this site. Use att/fetch-url for other sites.' );
+    }
+
+    $args  = array( 'timeout' => 20, 'redirection' => 0, 'limit_response_size' => (int) $max_bytes );
+    $token = '';
+    if ( $as_user ) {
+        $user_id         = get_current_user_id();
+        $expiration      = time() + 2 * MINUTE_IN_SECONDS;
+        $sessions        = WP_Session_Tokens::get_instance( $user_id );
+        $token           = $sessions->create( $expiration );
+        $args['cookies'] = array( LOGGED_IN_COOKIE => wp_generate_auth_cookie( $user_id, $expiration, 'logged_in', $token ) );
+    }
+
+    $resp  = null;
+    $start = microtime( true );
+    for ( $hop = 0; $hop <= 3; $hop++ ) {
+        $resp = wp_safe_remote_get( $url, $args );
+        if ( is_wp_error( $resp ) ) {
+            break;
+        }
+        $code = (int) wp_remote_retrieve_response_code( $resp );
+        $next = ( $code >= 300 && $code < 400 ) ? wp_remote_retrieve_header( $resp, 'location' ) : '';
+        $next = is_array( $next ) ? end( $next ) : $next;
+        if ( ! $next ) {
+            break;
+        }
+        $next = WP_Http::make_absolute_url( $next, $url );
+        if ( ! att_mcp_is_own_url( $next ) ) {
+            break; // never follow (or send the preview cookie) off-site
+        }
+        $url = $next;
+    }
+    $ms = (int) round( ( microtime( true ) - $start ) * 1000 );
+    if ( $token ) {
+        $sessions->destroy( $token );
+    }
+    if ( is_wp_error( $resp ) ) {
+        return $resp;
+    }
+
+    $headers = wp_remote_retrieve_headers( $resp );
+    $headers = is_object( $headers ) && method_exists( $headers, 'getAll' ) ? $headers->getAll() : (array) $headers;
+    return array(
+        'url'     => $url,
+        'status'  => (int) wp_remote_retrieve_response_code( $resp ),
+        'headers' => array_change_key_case( $headers, CASE_LOWER ),
+        'body'    => (string) wp_remote_retrieve_body( $resp ),
+        'preview' => $as_user,
+        'ms'      => $ms,
+    );
+}
+
+/** Last value of a response header (headers may repeat). */
+function att_mcp_header( $headers, $name ) {
+    $name = strtolower( $name );
+    if ( ! isset( $headers[ $name ] ) ) {
+        return '';
+    }
+    $value = $headers[ $name ];
+    return is_array( $value ) ? (string) end( $value ) : (string) $value;
 }
 
 /* ----- Internal REST calls ------------------------------------------------- */

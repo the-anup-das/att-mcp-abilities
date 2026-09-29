@@ -4,8 +4,9 @@
 #   and uninstall cleanup. Exits non-zero on the first failing step.
 #
 #   bash tests/e2e/setup.sh && bash tests/e2e/run-all.sh [--net]
-#   (--net also runs the checks that need internet access; set ATT_BROWSER to a
-#    Chrome/Edge executable to also test the admin UI in a real browser)
+#   (--net also runs the checks that need internet access, including the SEO and
+#    cache plugin integrations; set ATT_BROWSER to a Chrome/Edge executable to
+#    also test the admin UI in a real browser)
 set -euo pipefail
 cd "$(dirname "$0")"
 PHP_BIN="${PHP_BIN:-php}"
@@ -35,6 +36,16 @@ step "Real MCP session";     "${PHP_BIN}" setup-options.php && "${PHP_BIN}" mcp-
 # Up to here nothing at all may be logged.
 if [ -s "${LOG}" ]; then
   echo; echo "debug.log is not empty:"; cat "${LOG}"; exit 1
+fi
+
+# The real SEO and cache plugins (downloaded from WordPress.org, so --net only).
+if [[ " $* " == *" --net "* ]] || [ -n "${ATT_INTEGRATIONS:-}" ]; then
+  step "SEO + cache plugin integrations"; bash integrations.sh
+  # Third-party plugins may log notices of their own; this plugin's code must stay clean.
+  if [ -f "${LOG}" ] && grep -i "att-mcp-abilities" "${LOG}"; then
+    echo "PHP errors involving this plugin were logged."; exit 1
+  fi
+  rm -f "${LOG}"
 fi
 
 # The revoked password is expected to make MCP Adapter log "Permission denied".
