@@ -2,7 +2,8 @@
 /**
  * Shared bootstrap for the end-to-end test scripts: loads the throwaway test
  * WordPress (ATT_WP_DIR, default tests/e2e/wordpress), captures every PHP
- * warning/notice raised from plugin files and every _doing_it_wrong() call.
+ * warning/notice raised by this plugin's code (in its files, or anywhere while
+ * plugin code is on the call stack) and every _doing_it_wrong() call.
  */
 $_SERVER['HTTP_HOST']   = '127.0.0.1:8899';
 $_SERVER['SERVER_NAME'] = '127.0.0.1';
@@ -10,10 +11,32 @@ $_SERVER['SERVER_PORT'] = 8899;
 $_SERVER['REQUEST_URI'] = '/';
 $GLOBALS['att_issues']  = array();
 
+// The plugin's folder — matched exactly: on CI the checkout folder itself is
+// called att-mcp-abilities, so a substring match would claim every file.
+$GLOBALS['att_plugin_dirs'] = array(
+	str_replace( '\\', '/', (string) realpath( __DIR__ . '/../../att-mcp-abilities' ) ) . '/',
+	str_replace( '\\', '/', ( getenv( 'ATT_WP_DIR' ) ? getenv( 'ATT_WP_DIR' ) : __DIR__ . '/wordpress' ) ) . '/wp-content/plugins/att-mcp-abilities/',
+);
+function att_in_plugin( $file ) {
+	$file = str_replace( '\\', '/', (string) $file );
+	foreach ( $GLOBALS['att_plugin_dirs'] as $dir ) {
+		if ( strlen( $dir ) > 1 && 0 === stripos( $file, $dir ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 set_error_handler( function ( $no, $str, $file, $line ) {
-	$f = str_replace( '\\', '/', (string) $file );
-	if ( false !== strpos( $f, 'att-mcp-abilities' ) ) {
-		$GLOBALS['att_issues'][] = "PHP[$no] $str @ " . basename( $f ) . ":$line";
+	$ours = att_in_plugin( $file );
+	foreach ( $ours ? array() : debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS ) as $frame ) {
+		if ( isset( $frame['file'] ) && att_in_plugin( $frame['file'] ) ) {
+			$ours = true;
+			break;
+		}
+	}
+	if ( $ours ) {
+		$GLOBALS['att_issues'][] = "PHP[$no] $str @ " . basename( (string) $file ) . ":$line";
 	}
 	return false;
 } );

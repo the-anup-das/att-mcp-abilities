@@ -41,8 +41,9 @@ fi
 # The real SEO and cache plugins (downloaded from WordPress.org, so --net only).
 if [[ " $* " == *" --net "* ]] || [ -n "${ATT_INTEGRATIONS:-}" ]; then
   step "SEO + cache plugin integrations"; bash integrations.sh
-  # Third-party plugins may log notices of their own; this plugin's code must stay clean.
-  if [ -f "${LOG}" ] && grep -i "att-mcp-abilities" "${LOG}"; then
+  # Third-party plugins may log notices of their own; this plugin's code must stay
+  # clean (its files in a message or stack trace — not just the checkout folder name).
+  if [ -f "${LOG}" ] && grep -E 'att-mcp-abilities[/\\](includes[/\\]|att-mcp-abilities\.php|uninstall\.php)' "${LOG}"; then
     echo "PHP errors involving this plugin were logged."; exit 1
   fi
   rm -f "${LOG}"
