@@ -89,6 +89,7 @@ function att_mcp_ability_registry() {
         'att/analyze-post'    => $e( __( 'Analyze Post SEO', 'att-mcp-abilities' ), __( 'On-page SEO and readability checks for one post on its rendered page, with a score, fixes and internal-link suggestions.', 'att-mcp-abilities' ), 'SEO', 'read' ),
         'att/seo-audit'       => $e( __( 'SEO Audit', 'att-mcp-abilities' ),        __( 'Audit many posts at once (titles, descriptions, duplicates, thin content, alt text, links) plus site-wide SEO problems.', 'att-mcp-abilities' ), 'SEO', 'read' ),
         'att/update-seo-meta' => $e( __( 'Update SEO Meta', 'att-mcp-abilities' ),  __( 'Set the SEO title, meta description, focus keyword, canonical and indexing in Yoast SEO, Rank Math, All in One SEO or SEOPress. Undoable.', 'att-mcp-abilities' ), 'SEO', 'write' ),
+        'att/bulk-update-seo-meta' => $e( __( 'Bulk Update SEO Meta', 'att-mcp-abilities' ), __( 'Fix SEO titles, descriptions, focus keywords, canonicals and indexing on up to 50 posts per call, as one undoable change.', 'att-mcp-abilities' ), 'SEO', 'write' ),
         // DESIGN
         'att/get-active-theme'  => $e( __( 'Read Active Theme', 'att-mcp-abilities' ),     __( 'Active theme: name, version, parent/child, block-vs-classic, and supports.', 'att-mcp-abilities' ), 'Design', 'read' ),
         'att/render-page'       => $e( __( 'Render Page HTML', 'att-mcp-abilities' ),      __( 'Fetch the front-end HTML of a post/page (drafts included, as a preview) so the agent can target real CSS classes.', 'att-mcp-abilities' ), 'Design', 'read' ),
@@ -150,6 +151,11 @@ function att_mcp_ability_registry() {
             'att/elementor-save-page'      => $e( __( 'Save Page Layout', 'att-mcp-abilities' ),      __( 'Write a whole Elementor element tree to a page (turns Elementor on for that page if needed). Undoable.', 'att-mcp-abilities' ), 'Elementor', 'write' ),
             'att/elementor-update-kit'     => $e( __( 'Update Global Kit', 'att-mcp-abilities' ),     __( 'Change Elementor global colors, fonts, and layout settings. Undoable.', 'att-mcp-abilities' ), 'Elementor', 'write' ),
         );
+    }
+
+    if ( att_mcp_detect_rank_math() && function_exists( 'att_mcp_rank_math_registry' ) ) {
+        // RANK MATH: its own tools (rank-math/…, governed) + the fix tools this plugin adds.
+        $abilities += att_mcp_rank_math_registry();
     }
 
     /**

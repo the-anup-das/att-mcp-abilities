@@ -10,8 +10,8 @@
  *   - writes an audit-log entry (inputs redacted),
  *   - deep-redacts secret-looking values from the returned payload.
  *
- * Future trust features (undo, notifications, rate limiting) hook here instead
- * of touching each ability file.
+ * Other plugins' abilities in a governed namespace (governance.php) flow
+ * through here too, with their writes recorded for undo.
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -45,9 +45,14 @@ function att_mcp_register( $key, $args ) {
     return wp_register_ability( $key, $args );
 }
 
-function att_mcp_dispatch( $key, $callback, $input ) {
+/**
+ * Run one ability call. $opts (for governed abilities of other plugins):
+ *   access  'read' | 'write' — overrides the registry's access level,
+ *   record  true — capture every option/post meta change for undo.
+ */
+function att_mcp_dispatch( $key, $callback, $input, $opts = array() ) {
     $registry = function_exists( 'att_mcp_ability_registry' ) ? att_mcp_ability_registry() : array();
-    $access   = isset( $registry[ $key ]['access'] ) ? $registry[ $key ]['access'] : 'read';
+    $access   = isset( $opts['access'] ) ? $opts['access'] : ( isset( $registry[ $key ]['access'] ) ? $registry[ $key ]['access'] : 'read' );
     $input    = is_array( $input ) ? $input : array();
 
     // Kill switch + read-only safety valve (registration is also gated; this is defense in depth).
@@ -75,6 +80,10 @@ function att_mcp_dispatch( $key, $callback, $input ) {
     do_action( 'att_mcp_before_execute', $key, $input, $access );
 
     att_mcp_current_ability( $key );
+    $recording = ! empty( $opts['record'] ) && 'write' === $access && function_exists( 'att_mcp_recorder_start' );
+    if ( $recording ) {
+        att_mcp_recorder_start();
+    }
     $start = microtime( true );
     try {
         $result = call_user_func( $callback, $input );
@@ -82,6 +91,13 @@ function att_mcp_dispatch( $key, $callback, $input ) {
         $result = new WP_Error( 'att_mcp_exception', 'The ability failed: ' . $e->getMessage() );
     }
     $ms = (int) round( ( microtime( true ) - $start ) * 1000 );
+    if ( $recording ) {
+        // Whatever the outcome, anything that changed can be undone.
+        $changed = att_mcp_recorder_stop();
+        if ( $changed ) {
+            att_mcp_record_change( $changed, isset( $registry[ $key ]['label'] ) ? $registry[ $key ]['label'] : $key );
+        }
+    }
     att_mcp_current_ability( '' );
 
     // Record the true result, then redact what we hand back to the agent.
@@ -212,14 +228,18 @@ function att_mcp_redaction_marker() {
     return '***redacted***';
 }
 
-/** Recursively mask values whose KEY looks secret (safe: only secret-named keys). */
+/**
+ * Recursively mask values whose KEY looks secret (safe: only secret-named keys).
+ * Only non-empty strings are masked: booleans and numbers are not secrets, and
+ * keeping their type keeps results valid against strict output schemas.
+ */
 function att_mcp_redact_deep( $data, $depth = 0 ) {
     if ( $depth > 12 || ! is_array( $data ) ) {
         return $data;
     }
     $out = array();
     foreach ( $data as $k => $v ) {
-        if ( is_string( $k ) && att_mcp_is_secret_name( $k ) && ! is_array( $v ) ) {
+        if ( is_string( $k ) && is_string( $v ) && '' !== $v && att_mcp_is_secret_name( $k ) ) {
             $out[ $k ] = att_mcp_redaction_marker();
         } elseif ( is_array( $v ) ) {
             $out[ $k ] = att_mcp_redact_deep( $v, $depth + 1 );
@@ -361,7 +381,15 @@ function att_mcp_audit_describe( $result ) {
     if ( is_array( $result ) ) {
         // Legacy/soft failures: array( 'success' => false, 'error' => '…' ).
         if ( isset( $result['success'] ) && false === $result['success'] ) {
-            return array( 'error', isset( $result['error'] ) ? (string) $result['error'] : 'failed' );
+            return array( 'error', isset( $result['error'] ) && is_scalar( $result['error'] ) ? (string) $result['error'] : 'failed' );
+        }
+        // Other plugins' tools (e.g. Rank Math) report failures as array( 'error' => array( code, message ) ).
+        if ( ! empty( $result['error'] ) && ( is_string( $result['error'] ) || is_array( $result['error'] ) ) ) {
+            $error = $result['error'];
+            if ( is_array( $error ) ) {
+                $error = ( isset( $error['code'] ) ? $error['code'] . ': ' : '' ) . ( isset( $error['message'] ) ? $error['message'] : wp_json_encode( $error ) );
+            }
+            return array( 'error', (string) $error );
         }
         return array( 'ok', 'keys: ' . implode( ', ', array_slice( array_keys( $result ), 0, 12 ) ) );
     }

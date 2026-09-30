@@ -9,7 +9,7 @@ function att_mcp_uninstall_site() {
     global $wpdb;
 
     foreach ( array(
-        'att_mcp_abilities', 'att_mcp_addons', 'att_mcp_controls', 'att_mcp_db_version', 'att_mcp_digest_last',
+        'att_mcp_abilities', 'att_mcp_addons', 'att_mcp_controls', 'att_mcp_db_version', 'att_mcp_digest_last', 'att_mcp_seen_abilities',
         // Legacy (pre-1.8.0 wsp_ prefix).
         'wsp_mcp_abilities', 'wsp_mcp_addons', 'wsp_mcp_controls', 'wsp_mcp_db_version',
     ) as $option ) {

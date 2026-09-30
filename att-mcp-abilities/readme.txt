@@ -4,7 +4,7 @@ Tags: mcp, ai, abilities api, seo, performance
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.10.0
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,7 +24,8 @@ You decide exactly what an agent may do. Every ability is a separate toggle, all
 * **Media** — upload from a URL, raw SVG (sanitized), or base64, and edit alt text and captions.
 * **Performance** — find what slows the site down (server, database, autoloaded options, cron, cache plugins and a real page load, with prioritised fixes), run Google PageSpeed Insights, clean up the database, stop large options from autoloading, and create missing image sizes.
 * **Cache plugins** — read and change the settings of LiteSpeed Cache (including its presets) and Super Page Cache through each plugin's own settings API, with recommendations that take your server into account. Credentials are never exposed.
-* **SEO** — analyse a post on its rendered page (title, meta description, focus keyword, headings, images, links, readability) with concrete fixes and internal-link suggestions, audit many posts at once, and set the SEO title, description, focus keyword, canonical URL and indexing in Yoast SEO, Rank Math, All in One SEO or SEOPress.
+* **SEO** — analyse a post on its rendered page (title, meta description, focus keyword, headings, images, links, readability) with concrete fixes and internal-link suggestions, audit many posts at once, and set the SEO title, description, focus keyword, canonical URL and indexing in Yoast SEO, Rank Math, All in One SEO or SEOPress — one post at a time or up to 50 per call.
+* **Rank Math** — Rank Math's own MCP tools (site audit and automatic fixes, post analysis, SEO scores, settings, sitemaps, links, redirections and 404 log, Search Console keywords, AI Visibility) follow this plugin's controls, can be switched on one by one, are logged, and their changes can be undone. Adds the fixes Rank Math's tools lack: create, edit and delete redirections, and clear the 404 log.
 * **Design** — Additional CSS, theme mods, plugin/theme options, rendering a page (drafts too), studying a public reference site, and purging caches.
 * **Block themes** — templates, template parts (header, footer), and global styles (colors, typography, spacing).
 * **GeneratePress** — settings with automatic CSS regeneration, and GeneratePress Elements.
@@ -35,7 +36,7 @@ You decide exactly what an agent may do. Every ability is a separate toggle, all
 **Safety built in**
 
 * **Master switch** and **read-only mode** — turn everything off, or pause all writes, in one click.
-* **Undo** — options, theme mods, Additional CSS, site settings, menu locations, builder layouts, post meta, SEO fields, cache-plugin settings and option autoloading are snapshotted before each change; content, templates and global styles keep WordPress revisions. Agents can list and undo changes.
+* **Undo** — options, theme mods, Additional CSS, site settings, menu locations, builder layouts, post meta, SEO fields, cache-plugin settings, Rank Math redirections and option autoloading are snapshotted before each change, and so is everything Rank Math's own write tools change; content, templates and global styles keep WordPress revisions. Agents can list and undo changes.
 * **Audit log** — every call is recorded (inputs redacted) under MCP › Activity, with an optional daily email summary.
 * **Rate limit** — a per-user cap on write calls per minute stops a runaway agent.
 * **Secret redaction** — secret-looking values are masked in every response and log entry, and a masked placeholder can never be written back over the real secret; secret-like and core options are blocked.
@@ -81,6 +82,10 @@ Enable the **History & undo** abilities and ask the agent to "undo the last chan
 
 The REST tools refuse user, application-password, plugin and settings routes, the option tools refuse core and security options, and this plugin and MCP Adapter cannot be deactivated through MCP. Beyond that an agent can only do what the connected WordPress user may do.
 
+= Rank Math has its own MCP tools. How do they work with this plugin? =
+
+Rank Math registers its own MCP tools (29 in Rank Math 1.0.279), and MCP Adapter offers them over the same connection as this plugin's. The kill switch, read-only mode, write limit, activity log and undo in MCP › Settings apply to them as well. To choose them one by one, enable the **Rank Math SEO** addon: its tools are then listed with their own switches (reads on, writes off by default), and a tool you switch off is hidden from agents and refuses to run. The addon also adds tools to save and delete redirections and to clear the 404 log, so an agent can fix what Rank Math's audit reports. Per-post fixes (SEO title, description, focus keyword) use "Update SEO Meta" or "Bulk Update SEO Meta".
+
 = Which cache and SEO plugins are supported? =
 
 Cache settings can be read and changed for **LiteSpeed Cache** and **Super Page Cache**; other cache plugins are detected and purged. SEO fields can be written to **Yoast SEO**, **Rank Math**, **All in One SEO** (4.9.8 or later) and **SEOPress**. The performance audit and the post analysis work without any of them.
@@ -112,6 +117,7 @@ This plugin does not contact any service by itself. Outbound requests happen onl
 * **Google PageSpeed Insights** (www.googleapis.com) — only when the "PageSpeed Insights" ability is used. The URL of the page being tested (a page of this site), the chosen strategy (mobile or desktop) and categories, and your API key if you set one are sent to Google, which then loads that page to measure it. [Google Privacy Policy](https://policies.google.com/privacy), [Google APIs Terms of Service](https://developers.google.com/terms).
 * **Your own site** — "Render Page HTML", "Audit Performance" and "Analyze Post SEO" request pages from this same site to check the result.
 * **Cache plugin services** — changing LiteSpeed Cache or Super Page Cache settings runs that plugin's own save routine, which may contact the plugin's own services (QUIC.cloud, Cloudflare) exactly as saving the settings in its admin screen would, if you have connected them.
+* **Rank Math's services** — Rank Math's own MCP tools are Rank Math's code: some of them (Search Console keywords, AI Visibility, the site audit) contact Rank Math's or Google's services exactly as they do without this plugin. This plugin only decides whether they may run, and logs them.
 
 The connection snippets on the Connect screen run the `@automattic/mcp-wordpress-remote` package from npm on your own computer; this plugin never contacts npm.
 
@@ -120,6 +126,14 @@ The connection snippets on the Connect screen run the `@automattic/mcp-wordpress
 The audit log (MCP › Activity) stores, in your own database, the time, ability name, user ID, status, duration, and the call inputs with secret-looking values redacted — the newest 500 entries. The change history stores the previous values of settings an agent changed — the newest 50 changes. If you enable the daily summary, a list of write calls is emailed to the site's admin address. Everything is deleted when you uninstall the plugin.
 
 == Changelog ==
+
+= 1.11.0 =
+* New: Rank Math SEO addon. Rank Math's own MCP tools (site audit and automatic fixes, post analysis, SEO scores, settings, sitemaps, links, redirections and 404 log reads, Search Console keywords, AI Visibility) can be switched on one by one; a tool that is off is hidden from agents and refuses to run.
+* New: Other plugins' MCP tools that this plugin governs (Rank Math's) always follow the kill switch, read-only mode and write limit, are logged in MCP › Activity, and the option and post meta changes their write tools make can be undone — including Rank Math's bulk focus-keyword fix.
+* New: "Save Redirection", "Delete Redirections" (trash or permanent, undoable) and "Clear 404 Log" for Rank Math, so agents can fix 404s and changed URLs; redirect loops are refused.
+* New: "Bulk Update SEO Meta" — SEO title, description, focus keyword, canonical and indexing for up to 50 posts per call, as one undoable change (Yoast SEO, Rank Math, All in One SEO, SEOPress).
+* Fix: Undoing a permalink change now also updates WordPress's rewrite rules.
+* Fix: Redaction no longer turns booleans and numbers under secret-looking names into strings.
 
 = 1.10.0 =
 * New: Performance — "Audit Performance" finds what slows the site down (server, database, autoloaded options, cron, cache plugins and a real page load: response times, page-cache hits, compression, render-blocking scripts and styles, image weight and formats, lazy-loading, third-party hosts) and returns prioritised fixes.
@@ -157,6 +171,9 @@ The audit log (MCP › Activity) stores, in your own database, the time, ability
 * Addon framework, MCP Controls (kill switch, read-only mode, audit log), secret redaction, and the Activity screen.
 
 == Upgrade Notice ==
+
+= 1.11.0 =
+Rank Math's own MCP tools now follow your MCP Controls (and can be chosen one by one with the new Rank Math SEO addon), plus redirection, 404 and bulk SEO fix tools.
 
 = 1.10.0 =
 New performance, cache-configuration and SEO abilities (all off by default) and safer handling of redacted secrets.

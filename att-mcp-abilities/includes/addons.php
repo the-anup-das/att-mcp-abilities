@@ -60,6 +60,13 @@ function att_mcp_addons() {
             'detect'      => 'att_mcp_detect_code_snippets',
             'groups'      => array( 'Code Snippets' ),
         ),
+        'rank_math' => array(
+            'label'       => __( 'Rank Math SEO', 'att-mcp-abilities' ),
+            'description' => __( "Choose which of Rank Math's own MCP tools agents may use (site audit and fixes, post analysis, SEO scores, settings, sitemaps, links, redirections, 404 log, Search Console, AI Visibility), and add fix tools for redirections and the 404 log.", 'att-mcp-abilities' ),
+            'detect'      => 'att_mcp_detect_rank_math',
+            'groups'      => array( 'Rank Math', 'Rank Math Fixes' ),
+            'governs'     => 'rank-math/', // other plugin's abilities this addon controls (see governance.php)
+        ),
         'advanced' => array(
             'label'       => __( 'Advanced (site administration)', 'att-mcp-abilities' ),
             'description' => __( 'Full WordPress REST API access as the connected user, and installing/activating plugins and themes from WordPress.org. Powerful — enable only for agents you fully trust.', 'att-mcp-abilities' ),
@@ -79,6 +86,7 @@ function att_mcp_addons() {
 function att_mcp_detect_generatepress() { return function_exists( 'generate_get_defaults' ); }
 function att_mcp_detect_elementor()     { return class_exists( '\Elementor\Plugin' ); }
 function att_mcp_detect_code_snippets() { return class_exists( '\Code_Snippets\Snippet' ); }
+function att_mcp_detect_rank_math()     { return defined( 'RANK_MATH_VERSION' ); }
 
 /** Is the addon's target plugin/theme present on this site? */
 function att_mcp_addon_is_available( $key ) {

@@ -119,6 +119,7 @@ $r = t_run( 'att/update-site-settings', array( 'timezone' => 'Mars/Olympus' ) );
 t_ok( 'invalid timezone rejected', 'att_mcp_bad_timezone' === t_code( $r ), $r );
 $u = t_run( 'att/undo-change' );
 t_ok( 'undo site settings', ! is_wp_error( $u ) && $before === get_option( 'blogname' ) && 'posts' === get_option( 'show_on_front' ), $u );
+t_ok( '... incl. the permalink structure WordPress routes with', '' === get_option( 'permalink_structure' ) && '' === $GLOBALS['wp_rewrite']->permalink_structure, $GLOBALS['wp_rewrite']->permalink_structure );
 $redo = is_array( $u ) ? (int) $u['redo_change_id'] : 0;
 $u2 = t_run( 'att/undo-change', array( 'id' => $redo ) );
 t_ok( 'undo the undo (redo)', ! is_wp_error( $u2 ) && 'Cloned Site' === get_option( 'blogname' ), $u2 );
@@ -381,6 +382,60 @@ foreach ( array( 'litespeed.conf.object-pswd', 'litespeed.conf.cdn-cloudflare_ke
 }
 $red = att_mcp_redact_deep( array( 'sk_b64' => 'k', 'pk_b64' => 'public', 'cf_apitoken' => 't', 'cf_email' => 'e@x.test' ) );
 t_ok( 'redaction covers QUIC.cloud and Cloudflare keys', '***redacted***' === $red['sk_b64'] && '***redacted***' === $red['cf_apitoken'] && 'public' === $red['pk_b64'], $red );
+$red = att_mcp_redact_deep( array( 'api_key_set' => true, 'smtp_port' => 587, 'password' => 'x', 'token' => '' ) );
+t_ok( 'redaction keeps booleans, numbers and empty strings (strict output schemas stay valid)', true === $red['api_key_set'] && 587 === $red['smtp_port'] && '***redacted***' === $red['password'] && '' === $red['token'], $red );
+t_ok( "other plugins' error results are logged as errors", 'error' === att_mcp_audit_describe( array( 'error' => array( 'code' => 'no_fields', 'message' => 'Nothing to do' ) ) )[0] && 'ok' === att_mcp_audit_describe( array( 'fixed' => false, 'summary' => 'x' ) )[0] );
+
+/* ------------------------------------------------------------------ */
+t_section( "Other plugins' MCP tools follow the MCP Controls (simulated rank-math/ tool)" );
+t_ok( 'no Rank Math entries while Rank Math is inactive', ! array_filter( array_keys( att_mcp_ability_registry() ), function ( $k ) { return 0 === strpos( $k, 'rank-math/' ) || 0 === strpos( $k, 'att/rank-math-' ); } ) && ! att_mcp_addon_is_available( 'rank_math' ) );
+$gov_calls = 0;
+$gov_args  = array(
+	'label'               => 'E2E governed tool',
+	'description'         => 'Writes an option and post meta.',
+	'category'            => 'att',
+	'input_schema'        => array( 'type' => 'object', 'properties' => array( 'v' => array( 'type' => 'string' ) ) ),
+	'permission_callback' => '__return_true',
+	'meta'                => array( 'annotations' => array( 'readonly' => false ), 'mcp' => array( 'public' => true ), 'show_in_rest' => true ),
+	'execute_callback'    => function ( $input = array() ) use ( &$gov_calls, $page_id ) {
+		$gov_calls++;
+		update_option( 'att_e2e_gov_opt', isset( $input['v'] ) ? $input['v'] : 'x' );
+		update_post_meta( $page_id, 'att_e2e_gov_meta', 'new' );
+		set_transient( 'att_e2e_gov_transient', 'noise', 60 );
+		return array( 'saved' => true, 'secret_token' => 'abc' );
+	},
+);
+update_option( 'att_e2e_gov_opt', 'before' );
+$g = att_mcp_govern_ability_args( $gov_args, 'rank-math/att-e2e-fake' );
+t_ok( 'while its addon is off, a governed tool stays exposed as its plugin ships it', true === $g['meta']['mcp']['public'] && true === $g['meta']['show_in_rest'] && array() === $g['input_schema']['default'], $g['meta'] );
+$res = call_user_func( $g['execute_callback'], array( 'v' => 'after' ) );
+t_ok( '... but runs through the dispatcher (output redacted)', 1 === $gov_calls && is_array( $res ) && '***redacted***' === $res['secret_token'] && 'after' === get_option( 'att_e2e_gov_opt' ), $res );
+$last = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id DESC LIMIT 1', att_mcp_audit_table() ) );
+t_ok( '... is logged as a write', $last && 'rank-math/att-e2e-fake' === $last->ability && 'write' === $last->access && 'ok' === $last->status, $last );
+$list    = t_run( 'att/list-changes', array( 'limit' => 1 ) );
+$c       = is_array( $list ) ? $list['changes'][0] : array( 'ability' => '', 'items' => array() );
+$targets = wp_json_encode( wp_list_pluck( $c['items'], 'target' ) );
+t_ok( '... and its option + post meta changes are recorded (transients are not)', 'rank-math/att-e2e-fake' === $c['ability'] && 2 === count( $c['items'] ) && false !== strpos( $targets, 'att_e2e_gov_opt' ) && false !== strpos( $targets, 'att_e2e_gov_meta' ), $c );
+$u = t_run( 'att/undo-change' );
+t_ok( 'undo restores what the governed tool changed', ! is_wp_error( $u ) && 'before' === get_option( 'att_e2e_gov_opt' ) && ! metadata_exists( 'post', $page_id, 'att_e2e_gov_meta' ), $u );
+$seen = (array) get_option( 'att_mcp_seen_abilities', array() );
+t_ok( 'a tool this plugin does not describe is remembered for MCP > Settings', isset( $seen['rank-math/att-e2e-fake'] ) && false === $seen['rank-math/att-e2e-fake']['readonly'], $seen );
+delete_option( 'att_mcp_seen_abilities' );
+set_controls( array( 'writes_paused' => true ) );
+$g = att_mcp_govern_ability_args( $gov_args, 'rank-math/att-e2e-fake' );
+t_ok( 'read-only mode hides a governed write tool from MCP and REST', false === $g['meta']['mcp']['public'] && false === $g['meta']['show_in_rest'] && 'att_mcp_writes_paused' === t_code( call_user_func( $g['execute_callback'], array() ) ) && 1 === $gov_calls );
+set_controls( array( 'writes_paused' => false, 'active' => false ) );
+$g = att_mcp_govern_ability_args( $gov_args, 'rank-math/att-e2e-fake' );
+t_ok( 'the kill switch hides and stops governed tools', false === $g['meta']['mcp']['public'] && 'att_mcp_disabled' === t_code( call_user_func( $g['execute_callback'], array() ) ) && 1 === $gov_calls );
+set_controls( array( 'active' => true ) );
+t_ok( 'abilities of other namespaces are left alone', $gov_args === att_mcp_govern_ability_args( $gov_args, 'other-plugin/tool' ) );
+
+/* ------------------------------------------------------------------ */
+t_section( 'Bulk SEO meta (no SEO plugin installed)' );
+$r = t_run( 'att/bulk-update-seo-meta', array( 'items' => array( array( 'id' => $post_id, 'title' => 'x' ) ) ) );
+t_ok( 'bulk-update-seo-meta needs an SEO plugin', 'att_mcp_no_seo_plugin' === t_code( $r ), $r );
+$r = t_run( 'att/bulk-update-seo-meta', array( 'items' => array_fill( 0, 51, array( 'id' => $post_id, 'title' => 'x' ) ) ) );
+t_ok( '... and takes at most 50 items', 'att_mcp_bad_input' === t_code( $r ), $r );
 
 /* ------------------------------------------------------------------ */
 t_section( 'Site Editor (block theme: ' . get_stylesheet() . ')' );

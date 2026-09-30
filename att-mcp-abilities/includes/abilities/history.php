@@ -12,7 +12,7 @@ function att_mcp_register_history_abilities() {
     if ( att_mcp_is_enabled( 'att/list-changes' ) ) {
         att_mcp_register( 'att/list-changes', array_merge( $base, array(
             'label'               => 'List Changes',
-            'description'         => 'Lists the most recent undoable MCP changes, newest first: change id, time, ability, what it touched, and whether it was already undone.',
+            'description'         => "Lists the most recent undoable MCP changes, newest first: change id, time, ability, what it touched, and whether it was already undone. Includes changes made by other plugins' MCP tools that this site governs, such as Rank Math's own write tools (rank-math/…).",
             'input_schema'        => array( 'type' => 'object', 'properties' => array(
                 'limit'          => array( 'type' => 'integer', 'description' => '1–50. Default 20.' ),
                 'include_values' => array( 'type' => 'boolean', 'description' => 'Include the stored previous values. Default false.' ),

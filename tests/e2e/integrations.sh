@@ -49,6 +49,13 @@ for slug in ${PLUGINS}; do
   "${PHP_BIN}" setup-options.php > /dev/null   # the plugin's abilities show up once it is active
   "${PHP_BIN}" integrations.php "${slug}" write
   "${PHP_BIN}" integrations.php "${slug}" verify
+  if [ "${slug}" = "seo-by-rank-math" ]; then
+    # Rank Math's own MCP tools: under the MCP Controls, then per-tool toggles + fix tools.
+    "${PHP_BIN}" integrations.php "${slug}" rm-tools
+    "${PHP_BIN}" integrations.php "${slug}" rm-admin
+    "${PHP_BIN}" integrations.php "${slug}" rm-govern
+    "${PHP_BIN}" mcp-rank-math-test.php
+  fi
   "${PHP_BIN}" integrations.php "${slug}" deactivate
 done
 echo; echo "All integration suites passed."

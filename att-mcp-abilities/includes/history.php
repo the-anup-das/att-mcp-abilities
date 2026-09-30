@@ -9,9 +9,11 @@
  *
  * Covered: options, option autoload flags, theme mods, Additional CSS, post meta
  * (incl. Elementor data and kit settings, SEO plugin fields), All in One SEO
- * post data, and LiteSpeed Cache / Super Page Cache settings (restored through
- * each plugin's own settings API). Post/page/template content is covered by
- * core revisions instead (att/list-revisions, att/restore-revision).
+ * post data, LiteSpeed Cache / Super Page Cache settings and Rank Math
+ * redirections (restored through each plugin's own API), and every option and
+ * post meta change made by governed tools of other plugins, such as Rank Math's
+ * own write tools (governance.php records them). Post/page/template content is
+ * covered by core revisions instead (att/list-revisions, att/restore-revision).
  *
  * Stored in {$wpdb->prefix}att_mcp_changes; the newest 50 changes are kept and
  * a single change larger than 1 MB is not recorded (the write still happens).
@@ -61,6 +63,7 @@ function att_mcp_current_ability( $set = null ) {
  *   litespeed_conf   target = list of LiteSpeed Cache setting ids
  *   spc_settings     target = list of Super Page Cache setting keys
  *   aioseo_post      target = post id (All in One SEO title, description, …)
+ *   rank_math_redirection  target = Rank Math redirection id (the whole row)
  */
 function att_mcp_capture( $type, $target ) {
     switch ( $type ) {
@@ -78,6 +81,7 @@ function att_mcp_capture( $type, $target ) {
         case 'litespeed_conf':
         case 'spc_settings':
         case 'aioseo_post':
+        case 'rank_math_redirection':
             // Plugin-backed state: captured and restored through the plugin's own API.
             $fn = 'att_mcp_capture_' . $type;
             return function_exists( $fn ) ? call_user_func( $fn, $target ) : null;
@@ -165,6 +169,8 @@ function att_mcp_can_restore_item( $item ) {
             return current_user_can( 'manage_options' ) && function_exists( 'att_mcp_restore_' . $item['type'] );
         case 'aioseo_post':
             return current_user_can( 'edit_post', (int) $item['target'] ) && function_exists( 'att_mcp_restore_aioseo_post' );
+        case 'rank_math_redirection':
+            return function_exists( 'att_mcp_rank_math_can' ) && att_mcp_rank_math_can( 'redirections' );
         case 'theme_mod':
             return current_user_can( 'edit_theme_options' );
         case 'custom_css':
@@ -190,6 +196,14 @@ function att_mcp_restore_item( $item ) {
             if ( 'generate_settings' === $item['target'] && function_exists( 'att_mcp_gp_refresh_css' ) ) {
                 att_mcp_gp_refresh_css();
             }
+            if ( 'permalink_structure' === $item['target'] ) {
+                global $wp_rewrite;
+                $wp_rewrite->set_permalink_structure( $existed ? (string) $value : '' );
+                flush_rewrite_rules( false );
+            } elseif ( 'rank_math_modules' === $item['target'] ) {
+                // Module rewrite rules (sitemaps, llms.txt) are rebuilt on the next request.
+                delete_option( 'rewrite_rules' );
+            }
             break;
 
         case 'option_autoload':
@@ -201,6 +215,7 @@ function att_mcp_restore_item( $item ) {
         case 'litespeed_conf':
         case 'spc_settings':
         case 'aioseo_post':
+        case 'rank_math_redirection':
             $result = call_user_func( 'att_mcp_restore_' . $item['type'], $item );
             if ( is_wp_error( $result ) ) {
                 return $result;

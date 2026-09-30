@@ -6,6 +6,7 @@
  *  att/seo-audit        the same essentials across many posts + site-wide checks
  *  att/update-seo-meta  SEO title, meta description, focus keyword, canonical and indexing,
  *                       written to whichever SEO plugin is active — undoable
+ *  att/bulk-update-seo-meta  the same for up to 50 posts, as one undoable change
  *
  * Supported SEO plugins: Yoast SEO, Rank Math, All in One SEO and SEOPress. Yoast,
  * Rank Math and SEOPress keep these fields in post meta (the plugins read them
@@ -72,6 +73,39 @@ function att_mcp_register_seo_abilities() {
             ),
             'permission_callback' => $can,
             'execute_callback'    => 'att_mcp_execute_update_seo_meta',
+            'meta'                => array_merge( $base['meta'], array( 'annotations' => array( 'destructive' => false, 'idempotent' => true ) ) ),
+        ) ) );
+    }
+
+    if ( att_mcp_is_enabled( 'att/bulk-update-seo-meta' ) ) {
+        att_mcp_register( 'att/bulk-update-seo-meta', array_merge( $base, array(
+            'label'               => 'Bulk Update SEO Meta',
+            'description'         => 'The same as att/update-seo-meta for up to 50 posts in one call — for fixing site-wide findings from att/seo-audit or Rank Math\'s rank-math/audit-site-seo (titles too long, missing descriptions, missing focus keywords) — recorded as ONE change that att/undo-change reverts. Pass "items": [{id, title?, description?, focus_keyword?, canonical?, indexing?}]; each item changes only the fields it includes. Items that are invalid or not yours to edit are reported in "errors" and skipped; the rest are written. Write a specific title and description per post rather than templated text.',
+            'input_schema'        => array(
+                'type'       => 'object',
+                'required'   => array( 'items' ),
+                'properties' => array(
+                    'items'  => array(
+                        'type'  => 'array',
+                        'items' => array(
+                            'type'       => 'object',
+                            'required'   => array( 'id' ),
+                            'properties' => array(
+                                'id'            => array( 'type' => 'integer' ),
+                                'title'         => array( 'type' => 'string' ),
+                                'description'   => array( 'type' => 'string' ),
+                                'focus_keyword' => array( 'type' => 'string' ),
+                                'canonical'     => array( 'type' => 'string' ),
+                                'indexing'      => array( 'type' => 'string', 'enum' => array( 'index', 'noindex', 'default' ) ),
+                            ),
+                        ),
+                        'description' => 'Up to 50 posts.',
+                    ),
+                    'plugin' => array( 'type' => 'string', 'enum' => array( 'yoast', 'rank_math', 'aioseo', 'seopress' ), 'description' => 'Only needed when several SEO plugins are active.' ),
+                ),
+            ),
+            'permission_callback' => $can,
+            'execute_callback'    => 'att_mcp_execute_bulk_update_seo_meta',
             'meta'                => array_merge( $base['meta'], array( 'annotations' => array( 'destructive' => false, 'idempotent' => true ) ) ),
         ) ) );
     }
@@ -812,8 +846,26 @@ function att_mcp_restore_aioseo_post( $item ) {
     return is_string( $result ) && '' !== $result ? new WP_Error( 'att_mcp_aioseo_failed', 'All in One SEO could not save: ' . $result ) : true;
 }
 
-function att_mcp_execute_update_seo_meta( $input ) {
-    $post = get_post( isset( $input['id'] ) ? (int) $input['id'] : 0 );
+/* SEO meta writes are split so att/update-seo-meta and att/bulk-update-seo-meta share them. */
+
+/** The SEO plugin to write to (from "plugin", else the active one); WP_Error when there is none. */
+function att_mcp_seo_resolve_plugin( $input ) {
+    $plugin = att_mcp_seo_plugin( isset( $input['plugin'] ) ? sanitize_key( (string) $input['plugin'] ) : '' );
+    if ( is_wp_error( $plugin ) ) {
+        return $plugin;
+    }
+    if ( '' === $plugin ) {
+        return new WP_Error( 'att_mcp_no_seo_plugin', 'No supported SEO plugin is active (Yoast SEO, Rank Math, All in One SEO or SEOPress). Install one with att/manage-plugin first; without one WordPress outputs no meta description.' );
+    }
+    if ( 'aioseo' === $plugin && version_compare( AIOSEO_VERSION, '4.9.8', '<' ) ) {
+        return new WP_Error( 'att_mcp_aioseo_old', 'All in One SEO 4.9.8 or newer is needed (older versions reset unsent fields when saving). Update the plugin first.' );
+    }
+    return $plugin;
+}
+
+/** A post whose SEO meta the current user may change; WP_Error otherwise. */
+function att_mcp_seo_check_post( $id ) {
+    $post = get_post( (int) $id );
     if ( ! $post ) {
         return new WP_Error( 'att_mcp_no_post', 'No post/page found for that id.' );
     }
@@ -823,28 +875,26 @@ function att_mcp_execute_update_seo_meta( $input ) {
     if ( ! is_post_type_viewable( $post->post_type ) ) {
         return new WP_Error( 'att_mcp_not_viewable', 'This content type has no public page.' );
     }
-    $plugin = att_mcp_seo_plugin( isset( $input['plugin'] ) ? sanitize_key( (string) $input['plugin'] ) : '' );
-    if ( is_wp_error( $plugin ) ) {
-        return $plugin;
-    }
-    if ( '' === $plugin ) {
-        return new WP_Error( 'att_mcp_no_seo_plugin', 'No supported SEO plugin is active (Yoast SEO, Rank Math, All in One SEO or SEOPress). Install one with att/manage-plugin first; without one WordPress outputs no meta description.' );
-    }
+    return $post;
+}
 
+/** The requested SEO field changes (validated); WP_Error when there are none or one is invalid. */
+function att_mcp_seo_parse_changes( $input ) {
+    $input   = (array) $input;
     $changes = array();
     foreach ( array( 'title' => 300, 'description' => 500, 'focus_keyword' => 200 ) as $field => $max ) {
-        if ( array_key_exists( $field, (array) $input ) ) {
+        if ( array_key_exists( $field, $input ) ) {
             $changes[ $field ] = substr( sanitize_text_field( (string) $input[ $field ] ), 0, $max );
         }
     }
-    if ( array_key_exists( 'canonical', (array) $input ) ) {
+    if ( array_key_exists( 'canonical', $input ) ) {
         $canonical = trim( (string) $input['canonical'] );
         if ( '' !== $canonical && ! wp_http_validate_url( $canonical ) ) {
             return new WP_Error( 'att_mcp_bad_input', '"canonical" must be an absolute http(s) URL, or an empty string.' );
         }
         $changes['canonical'] = '' === $canonical ? '' : esc_url_raw( $canonical );
     }
-    if ( array_key_exists( 'indexing', (array) $input ) ) {
+    if ( array_key_exists( 'indexing', $input ) ) {
         if ( ! in_array( $input['indexing'], array( 'index', 'noindex', 'default' ), true ) ) {
             return new WP_Error( 'att_mcp_bad_input', '"indexing" must be index, noindex or default.' );
         }
@@ -856,14 +906,48 @@ function att_mcp_execute_update_seo_meta( $input ) {
     if ( ( isset( $changes['canonical'] ) || isset( $changes['indexing'] ) ) && ! current_user_can( 'edit_others_posts' ) ) {
         return new WP_Error( 'att_mcp_forbidden', 'Changing the canonical URL or indexing needs editor rights.' );
     }
+    return $changes;
+}
 
-    $before = att_mcp_seo_read( $plugin, $post->ID );
-    $label  = 'SEO meta of #' . $post->ID . ': ' . implode( ', ', array_keys( $changes ) );
-
-    if ( 'aioseo' === $plugin ) {
-        if ( version_compare( AIOSEO_VERSION, '4.9.8', '<' ) ) {
-            return new WP_Error( 'att_mcp_aioseo_old', 'All in One SEO 4.9.8 or newer is needed (older versions reset unsent fields when saving). Update the plugin first.' );
+/** Post meta writes for a meta-based SEO plugin: meta key => value (null = delete). */
+function att_mcp_seo_meta_writes( $plugin, $post_id, $changes ) {
+    $keys  = att_mcp_seo_meta_keys( $plugin );
+    $write = array();
+    foreach ( array( 'title', 'description', 'focus_keyword', 'canonical' ) as $field ) {
+        if ( isset( $changes[ $field ] ) ) {
+            $write[ $keys[ $field ] ] = '' === $changes[ $field ] ? null : $changes[ $field ];
         }
+    }
+    if ( isset( $changes['indexing'] ) ) {
+        $mode = $changes['indexing'];
+        if ( 'yoast' === $plugin ) {
+            $write[ $keys['robots'] ] = 'default' === $mode ? null : ( 'noindex' === $mode ? '1' : '2' );
+        } elseif ( 'rank_math' === $plugin ) {
+            $robots = get_post_meta( $post_id, $keys['robots'], true );
+            $robots = array_values( array_diff( is_array( $robots ) ? $robots : array(), array( 'index', 'noindex' ) ) );
+            $write[ $keys['robots'] ] = 'default' === $mode ? null : array_merge( array( $mode ), $robots );
+        } else { // seopress: 'yes' = noindex; no per-post "force index"
+            $write[ $keys['robots'] ] = 'noindex' === $mode ? 'yes' : null;
+        }
+    }
+    return $write;
+}
+
+/** History items capturing what a write of $changes will overwrite. */
+function att_mcp_seo_capture_items( $plugin, $post_id, $changes ) {
+    if ( 'aioseo' === $plugin ) {
+        return array( att_mcp_capture_aioseo_post( $post_id ) );
+    }
+    $items = array();
+    foreach ( array_keys( att_mcp_seo_meta_writes( $plugin, $post_id, $changes ) ) as $key ) {
+        $items[] = att_mcp_capture( 'post_meta', array( (int) $post_id, $key ) );
+    }
+    return $items;
+}
+
+/** Write $changes to the SEO plugin. True or WP_Error. */
+function att_mcp_seo_write( $plugin, $post_id, $changes ) {
+    if ( 'aioseo' === $plugin ) {
         $data = array();
         foreach ( array( 'title', 'description' ) as $field ) {
             if ( isset( $changes[ $field ] ) ) {
@@ -874,7 +958,7 @@ function att_mcp_execute_update_seo_meta( $input ) {
             $data['canonical_url'] = $changes['canonical'];
         }
         if ( isset( $changes['focus_keyword'] ) ) {
-            $kp = att_mcp_aioseo_keyphrases( att_mcp_aioseo_post( $post->ID ) );
+            $kp = att_mcp_aioseo_keyphrases( att_mcp_aioseo_post( $post_id ) );
             $kp['focus']['keyphrase'] = $changes['focus_keyword'];
             $data['keyphrases']       = $kp;
             if ( version_compare( AIOSEO_VERSION, '5.0', '>=' ) ) {
@@ -885,64 +969,140 @@ function att_mcp_execute_update_seo_meta( $input ) {
             $data['default'] = 'default' === $changes['indexing'];
             $data['noindex'] = 'noindex' === $changes['indexing'];
         }
-        $change_id = att_mcp_record_change( array( att_mcp_capture_aioseo_post( $post->ID ) ), $label );
-        $result    = \AIOSEO\Plugin\Common\Models\Post::savePost( $post->ID, $data );
+        $result = \AIOSEO\Plugin\Common\Models\Post::savePost( $post_id, $data );
         if ( is_string( $result ) && '' !== $result ) {
             return new WP_Error( 'att_mcp_aioseo_failed', 'All in One SEO could not save: ' . $result );
         }
-    } else {
-        $keys  = att_mcp_seo_meta_keys( $plugin );
-        $write = array(); // meta key => value ('' / null = delete)
-        foreach ( array( 'title', 'description', 'focus_keyword', 'canonical' ) as $field ) {
-            if ( isset( $changes[ $field ] ) ) {
-                $write[ $keys[ $field ] ] = '' === $changes[ $field ] ? null : $changes[ $field ];
-            }
-        }
-        if ( isset( $changes['indexing'] ) ) {
-            $mode = $changes['indexing'];
-            if ( 'yoast' === $plugin ) {
-                $write[ $keys['robots'] ] = 'default' === $mode ? null : ( 'noindex' === $mode ? '1' : '2' );
-            } elseif ( 'rank_math' === $plugin ) {
-                $robots = get_post_meta( $post->ID, $keys['robots'], true );
-                $robots = array_values( array_diff( is_array( $robots ) ? $robots : array(), array( 'index', 'noindex' ) ) );
-                $write[ $keys['robots'] ] = 'default' === $mode ? null : array_merge( array( $mode ), $robots );
-            } else { // seopress: 'yes' = noindex; no per-post "force index"
-                $write[ $keys['robots'] ] = 'noindex' === $mode ? 'yes' : null;
-            }
-        }
-        $items = array();
-        foreach ( array_keys( $write ) as $key ) {
-            $items[] = att_mcp_capture( 'post_meta', array( $post->ID, $key ) );
-        }
-        $change_id = att_mcp_record_change( $items, $label );
-        foreach ( $write as $key => $value ) {
-            if ( null === $value ) {
-                delete_post_meta( $post->ID, $key );
-            } else {
-                update_post_meta( $post->ID, $key, wp_slash( $value ) );
-            }
+        return true;
+    }
+    foreach ( att_mcp_seo_meta_writes( $plugin, $post_id, $changes ) as $key => $value ) {
+        if ( null === $value ) {
+            delete_post_meta( $post_id, $key );
+        } else {
+            update_post_meta( $post_id, $key, wp_slash( $value ) );
         }
     }
+    return true;
+}
 
-    $after   = att_mcp_seo_read( $plugin, $post->ID );
+/** "from → to" for each changed field. */
+function att_mcp_seo_diff( $before, $after, $changes ) {
     $changed = array();
     foreach ( array_keys( $changes ) as $field ) {
         $changed[ $field ] = array( 'from' => $before[ $field ], 'to' => $after[ $field ] );
     }
+    return $changed;
+}
+
+/** Follow-up notes after an SEO meta write. */
+function att_mcp_seo_write_notes( $plugin, $indexing_changes ) {
     $notes = array();
-    if ( 'seopress' === $plugin && isset( $changes['indexing'] ) && 'index' === $changes['indexing'] ) {
+    if ( 'seopress' === $plugin && in_array( 'index', $indexing_changes, true ) ) {
         $notes[] = 'SEOPress has no per-post "force index": the post now follows its post-type setting.';
+    }
+    if ( 'rank_math' === $plugin ) {
+        $notes[] = "Rank Math recalculates a post's stored SEO score (rank-math/get-seo-scores) when the post is next saved in its editor.";
     }
     if ( '' !== att_mcp_seo_plugin_problem( $plugin ) ) {
         $notes[] = att_mcp_seo_plugin_problem( $plugin );
     }
     $notes[] = 'Purge the page cache (att/purge-cache) and verify with att/analyze-post.';
+    return implode( ' ', $notes );
+}
+
+function att_mcp_execute_update_seo_meta( $input ) {
+    $post = att_mcp_seo_check_post( isset( $input['id'] ) ? (int) $input['id'] : 0 );
+    if ( is_wp_error( $post ) ) {
+        return $post;
+    }
+    $plugin = att_mcp_seo_resolve_plugin( $input );
+    if ( is_wp_error( $plugin ) ) {
+        return $plugin;
+    }
+    $changes = att_mcp_seo_parse_changes( $input );
+    if ( is_wp_error( $changes ) ) {
+        return $changes;
+    }
+
+    $before    = att_mcp_seo_read( $plugin, $post->ID );
+    $change_id = att_mcp_record_change( att_mcp_seo_capture_items( $plugin, $post->ID, $changes ), 'SEO meta of #' . $post->ID . ': ' . implode( ', ', array_keys( $changes ) ) );
+    $result    = att_mcp_seo_write( $plugin, $post->ID, $changes );
+    if ( is_wp_error( $result ) ) {
+        return $result;
+    }
 
     return array(
         'plugin'    => $plugin,
         'id'        => $post->ID,
-        'changed'   => $changed,
+        'changed'   => att_mcp_seo_diff( $before, att_mcp_seo_read( $plugin, $post->ID ), $changes ),
         'change_id' => $change_id,
-        'note'      => implode( ' ', $notes ),
+        'note'      => att_mcp_seo_write_notes( $plugin, isset( $changes['indexing'] ) ? array( $changes['indexing'] ) : array() ),
+    );
+}
+
+function att_mcp_execute_bulk_update_seo_meta( $input ) {
+    $items = ( isset( $input['items'] ) && is_array( $input['items'] ) ) ? array_values( $input['items'] ) : array();
+    if ( ! $items ) {
+        return new WP_Error( 'att_mcp_bad_input', 'Pass "items": a list of {id, title?, description?, focus_keyword?, canonical?, indexing?}.' );
+    }
+    if ( count( $items ) > 50 ) {
+        return new WP_Error( 'att_mcp_bad_input', 'At most 50 items per call; send the rest in another call.' );
+    }
+    $plugin = att_mcp_seo_resolve_plugin( $input );
+    if ( is_wp_error( $plugin ) ) {
+        return $plugin;
+    }
+
+    // Validate every item first; invalid ones are reported and skipped.
+    $valid  = array();
+    $errors = array();
+    foreach ( $items as $index => $item ) {
+        $item = is_array( $item ) ? $item : array();
+        $id   = isset( $item['id'] ) ? (int) $item['id'] : 0;
+        if ( isset( $valid[ $id ] ) ) {
+            $errors[] = array( 'index' => $index, 'id' => $id, 'error' => 'This id appears more than once.' );
+            continue;
+        }
+        $post    = att_mcp_seo_check_post( $id );
+        $changes = is_wp_error( $post ) ? $post : att_mcp_seo_parse_changes( $item );
+        if ( is_wp_error( $changes ) ) {
+            $errors[] = array( 'index' => $index, 'id' => $id, 'error' => $changes->get_error_message() );
+            continue;
+        }
+        $valid[ $post->ID ] = $changes;
+    }
+    if ( ! $valid ) {
+        return new WP_Error( 'att_mcp_bad_input', 'No item could be applied. First problem: item ' . $errors[0]['index'] . ' (id ' . $errors[0]['id'] . '): ' . $errors[0]['error'] );
+    }
+
+    // One undo point for the whole batch.
+    $before   = array();
+    $captures = array();
+    $indexing = array();
+    foreach ( $valid as $id => $changes ) {
+        $before[ $id ] = att_mcp_seo_read( $plugin, $id );
+        $captures      = array_merge( $captures, att_mcp_seo_capture_items( $plugin, $id, $changes ) );
+        if ( isset( $changes['indexing'] ) ) {
+            $indexing[] = $changes['indexing'];
+        }
+    }
+    $change_id = att_mcp_record_change( $captures, sprintf( 'SEO meta of %d posts: #%s', count( $valid ), implode( ', #', array_keys( $valid ) ) ) );
+
+    $updated = array();
+    foreach ( $valid as $id => $changes ) {
+        $result = att_mcp_seo_write( $plugin, $id, $changes );
+        if ( is_wp_error( $result ) ) {
+            $errors[] = array( 'id' => $id, 'error' => $result->get_error_message() );
+            continue;
+        }
+        $updated[] = array( 'id' => $id, 'changed' => att_mcp_seo_diff( $before[ $id ], att_mcp_seo_read( $plugin, $id ), $changes ) );
+    }
+
+    return array(
+        'plugin'    => $plugin,
+        'updated'   => $updated,
+        'errors'    => $errors,
+        'change_id' => $change_id,
+        'note'      => att_mcp_seo_write_notes( $plugin, $indexing ),
     );
 }
