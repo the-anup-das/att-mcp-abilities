@@ -27,12 +27,21 @@ const check = (label, ok, detail = '') => {
 // Windows: some shells (e.g. Git Bash here) export __COMPAT_LAYER=RunAsInvoker, which makes
 // Chrome/Edge exit at startup with code 0. Launch the browser without it.
 const { __COMPAT_LAYER, ...browserEnv } = process.env;
-const browser = await puppeteer.launch({
+const launch = () => puppeteer.launch({
 	executablePath: EXE,
 	headless: true,
 	env: browserEnv,
-	args: ['--no-first-run', '--disable-extensions', '--hide-scrollbars', ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
+	timeout: 90000,
+	args: ['--no-first-run', '--disable-extensions', '--hide-scrollbars', ...(process.platform === 'linux' ? ['--no-sandbox', '--disable-dev-shm-usage'] : [])],
 });
+let browser;
+try {
+	browser = await launch();
+} catch (e) {
+	// CI runners sometimes start Chrome slowly; try once more before failing.
+	console.log(`  (the browser did not start: ${String(e.message).split('\n')[0]} Retrying.)`);
+	browser = await launch();
+}
 await browser.defaultBrowserContext().overridePermissions(BASE, ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
 const page = await browser.newPage();
 await page.setViewport({ width: 1280, height: 860, deviceScaleFactor: 1 });
