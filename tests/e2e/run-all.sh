@@ -39,7 +39,7 @@ if [ -s "${LOG}" ]; then
 fi
 
 # The real SEO and cache plugins (downloaded from WordPress.org, so --net only).
-if [[ " $* " == *" --net "* ]] || [ -n "${ATT_INTEGRATIONS:-}" ]; then
+if [[ " $* " == *" --net "* ]] || [ -n "${ATT_INTEGRATIONS:-}" ] || [ -n "${ATT_QUICKCAL_ZIP:-}" ]; then
   step "SEO + cache plugin integrations"; bash integrations.sh
   # Third-party plugins may log notices of their own; this plugin's code must stay
   # clean (its files in a message or stack trace — not just the checkout folder name).

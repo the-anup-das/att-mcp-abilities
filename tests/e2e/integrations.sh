@@ -11,6 +11,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 PHP_BIN="${PHP_BIN:-php}"
 PLUGINS="${ATT_INTEGRATIONS:-wordpress-seo seo-by-rank-math all-in-one-seo-pack wp-seopress litespeed-cache wp-cloudflare-page-cache}"
+[ "${PLUGINS}" = "none" ] && PLUGINS=""   # e.g. ATT_INTEGRATIONS=none ATT_QUICKCAL_ZIP=… to test QuickCal only
 
 fetch() {
   local url="$1" file="$2"
@@ -58,4 +59,20 @@ for slug in ${PLUGINS}; do
   fi
   "${PHP_BIN}" integrations.php "${slug}" deactivate
 done
+# QuickCal is a paid plugin (CodeCanyon), so it is tested only when you point
+# ATT_QUICKCAL_ZIP at your own copy, e.g. ATT_QUICKCAL_ZIP=~/Downloads/quickcal_v1.0.24.zip
+if [ -n "${ATT_QUICKCAL_ZIP:-}" ]; then
+  echo; echo "######## quickcal (from ${ATT_QUICKCAL_ZIP})"
+  rm -rf wordpress/wp-content/plugins/quickcal
+  unzip -q "${ATT_QUICKCAL_ZIP}" -d wordpress/wp-content/plugins
+  "${PHP_BIN}" quickcal-test.php activate
+  "${PHP_BIN}" setup-options.php > /dev/null
+  "${PHP_BIN}" quickcal-test.php setup
+  "${PHP_BIN}" quickcal-test.php book
+  "${PHP_BIN}" quickcal-test.php admin
+  "${PHP_BIN}" quickcal-test.php deactivate
+else
+  echo; echo "(Skipping QuickCal — a paid plugin; set ATT_QUICKCAL_ZIP to your quickcal zip to test it.)"
+fi
+
 echo; echo "All integration suites passed."

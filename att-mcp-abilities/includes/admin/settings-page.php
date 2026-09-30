@@ -56,6 +56,7 @@ function att_mcp_group_label( $group ) {
         'GeneratePress' => __( 'GeneratePress', 'att-mcp-abilities' ),
         'Code Snippets' => __( 'Code Snippets', 'att-mcp-abilities' ),
         'Elementor'     => __( 'Elementor', 'att-mcp-abilities' ),
+        'QuickCal'        => __( 'QuickCal appointment booking', 'att-mcp-abilities' ),
         'Rank Math'       => __( "Rank Math's own tools", 'att-mcp-abilities' ),
         'Rank Math Fixes' => __( 'Redirection & 404 fixes (added by this plugin)', 'att-mcp-abilities' ),
         'Other MCP Tools' => __( "Other plugins' and WordPress's tools", 'att-mcp-abilities' ),
@@ -113,7 +114,7 @@ function att_mcp_settings_page() {
         'Posts' => '📝', 'Pages' => '📄', 'Content' => '🗂️', 'Taxonomy' => '🏷️', 'Comments' => '💬',
         'Media' => '🖼️', 'Users' => '👥', 'Search' => '🔍', 'Menus' => '🧭', 'Site' => '🌐', 'Performance' => '🚀', 'SEO' => '📈', 'History' => '↩️',
         'Design' => '🎨', 'Site Editor' => '🖌️', 'GeneratePress' => '🧱', 'Code Snippets' => '🧩',
-        'Elementor' => '⚡', 'Rank Math' => '🏆', 'Rank Math Fixes' => '🔀', 'Other MCP Tools' => '🔌', 'Advanced' => '🛠️',
+        'Elementor' => '⚡', 'QuickCal' => '📅', 'Rank Math' => '🏆', 'Rank Math Fixes' => '🔀', 'Other MCP Tools' => '🔌', 'Advanced' => '🛠️',
     );
 
     // Stats reflect EFFECTIVE (addon-gated) state. Other plugins' tools whose addon is

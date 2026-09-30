@@ -4,7 +4,7 @@ Tags: mcp, ai, abilities api, seo, performance
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.11.0
+Stable tag: 1.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,6 +26,7 @@ You decide exactly what an agent may do. Every ability is a separate toggle, all
 * **Cache plugins** — read and change the settings of LiteSpeed Cache (including its presets) and Super Page Cache through each plugin's own settings API, with recommendations that take your server into account. Credentials are never exposed.
 * **SEO** — analyse a post on its rendered page (title, meta description, focus keyword, headings, images, links, readability) with concrete fixes and internal-link suggestions, audit many posts at once, and set the SEO title, description, focus keyword, canonical URL and indexing in Yoast SEO, Rank Math, All in One SEO or SEOPress — one post at a time or up to 50 per call.
 * **Rank Math** — Rank Math's own MCP tools (site audit and automatic fixes, post analysis, SEO scores, settings, sitemaps, links, redirections and 404 log, Search Console keywords, AI Visibility) follow this plugin's controls, can be switched on one by one, are logged, and their changes can be undone. Adds the fixes Rank Math's tools lack: create, edit and delete redirections, and clear the 404 log.
+* **QuickCal (appointment booking)** — set up booking from scratch: calendars, weekly hours, special dates and closed days, blocked time slots, the booking form, settings and the emails customers get; see which slots are free; book, reschedule, approve and cancel appointments (QuickCal emails the customer, as its own screens do).
 * **Design** — Additional CSS, theme mods, plugin/theme options, rendering a page (drafts too), studying a public reference site, and purging caches.
 * **Block themes** — templates, template parts (header, footer), and global styles (colors, typography, spacing).
 * **GeneratePress** — settings with automatic CSS regeneration, and GeneratePress Elements.
@@ -36,7 +37,7 @@ You decide exactly what an agent may do. Every ability is a separate toggle, all
 **Safety built in**
 
 * **Master switch** and **read-only mode** — turn everything off, or pause all writes, in one click.
-* **Undo** — options, theme mods, Additional CSS, site settings, menu locations, builder layouts, post meta, SEO fields, cache-plugin settings, Rank Math redirections and option autoloading are snapshotted before each change, and so is everything Rank Math's own write tools change; content, templates and global styles keep WordPress revisions. Agents can list and undo changes.
+* **Undo** — options, theme mods, Additional CSS, site settings, menu locations, builder layouts, post meta, SEO fields, cache-plugin settings, Rank Math redirections, QuickCal calendars, time slots, forms, settings and appointments, and option autoloading are snapshotted before each change, and so is everything other plugins' own MCP tools change; content, templates and global styles keep WordPress revisions. Agents can list and undo changes.
 * **Audit log** — every call is recorded (inputs redacted) under MCP › Activity, with an optional daily email summary.
 * **Rate limit** — a per-user cap on write calls per minute stops a runaway agent.
 * **Secret redaction** — secret-looking values are masked in every response and log entry, and a masked placeholder can never be written back over the real secret; secret-like and core options are blocked.
@@ -88,6 +89,12 @@ Some plugins register MCP tools of their own — Rank Math (29 in 1.0.279), All 
 
 The Rank Math addon also adds tools to save and delete redirections and to clear the 404 log, so an agent can fix what Rank Math's audit reports. Per-post fixes (SEO title, description, focus keyword) use "Update SEO Meta" or "Bulk Update SEO Meta".
 
+= Can an agent set up appointment booking? =
+
+Yes, with **QuickCal**. Enable the QuickCal addon and its abilities, then ask for what you want, for example "one calendar per service, open Monday to Friday 9 to 5 in one-hour slots, closed on public holidays, guests can book without an account, and email them a confirmation". The agent creates the calendars, time slots, closed days, booking form, settings and emails, puts the calendar on a page, and checks which slots customers can book. Everything is written in QuickCal's own formats, so you can keep working in QuickCal's screens, and every change can be undone.
+
+The agent can also book appointments for customers, reschedule, approve and cancel them. QuickCal then emails the customer as its own screens would; "notify": false skips that. Appointment tools show customers' names, email addresses and booking-form answers to the agent, so enable them only for agents you trust with that data. QuickCal's private calendar-feed key is never readable by agents.
+
 = Which cache and SEO plugins are supported? =
 
 Cache settings can be read and changed for **LiteSpeed Cache** and **Super Page Cache**; other cache plugins are detected and purged. SEO fields can be written to **Yoast SEO**, **Rank Math**, **All in One SEO** (4.9.8 or later) and **SEOPress**. The performance audit and the post analysis work without any of them.
@@ -125,9 +132,18 @@ The connection snippets on the Connect screen run the `@automattic/mcp-wordpress
 
 == Privacy ==
 
-The audit log (MCP › Activity) stores, in your own database, the time, ability name, user ID, status, duration, and the call inputs with secret-looking values redacted — the newest 500 entries. The change history stores the previous values of settings an agent changed — the newest 50 changes. If you enable the daily summary, a list of write calls is emailed to the site's admin address. Everything is deleted when you uninstall the plugin.
+The audit log (MCP › Activity) stores, in your own database, the time, ability name, user ID, status, duration, and the call inputs with secret-looking values redacted — the newest 500 entries. Inputs can contain personal data an agent sent, such as a customer's name and email address when it books an appointment. The change history stores the previous values of settings an agent changed — the newest 50 changes. If you enable the daily summary, a list of write calls is emailed to the site's admin address. Everything is deleted when you uninstall the plugin.
 
 == Changelog ==
+
+= 1.12.0 =
+* New: QuickCal addon. Agents can set up appointment booking from scratch: calendars, weekly time slots, special dates and closed days, blocked slots, the booking form, settings and emails. They can also see which slots are free, and book, reschedule, approve and cancel appointments, with QuickCal's own emails to the customer. It is written in QuickCal's own formats and checked against QuickCal's own functions. Every change is undoable, including cancelled appointments and deleted calendars (restored under the same ids).
+* New: "Other MCP tools" addon. The MCP tools of any other plugin, and of WordPress 7.1 itself (All in One SEO, Yoast SEO, core…), now follow the kill switch, read-only mode, write limit, activity log and undo, and can be switched on one by one.
+* Change: Other plugins' tools are governed only when an MCP client calls them; a plugin using its own tools in its own screens is never logged, limited or refused.
+* New: All in One SEO's post SEO tool is undoable, including All in One SEO's own table.
+* Fix: Undo restores every value of a post meta key that has several.
+* Fix: Redirect destinations are checked without a DNS lookup.
+* Security: QuickCal's private calendar-feed key is protected like other secrets.
 
 = 1.11.0 =
 * New: Rank Math SEO addon. Rank Math's own MCP tools (site audit and automatic fixes, post analysis, SEO scores, settings, sitemaps, links, redirections and 404 log reads, Search Console keywords, AI Visibility) can be switched on one by one; a tool that is off is hidden from agents and refuses to run.
@@ -173,6 +189,9 @@ The audit log (MCP › Activity) stores, in your own database, the time, ability
 * Addon framework, MCP Controls (kill switch, read-only mode, audit log), secret redaction, and the Activity screen.
 
 == Upgrade Notice ==
+
+= 1.12.0 =
+New QuickCal addon for setting up appointment booking, and every other plugin's MCP tools now follow your MCP Controls.
 
 = 1.11.0 =
 Rank Math's own MCP tools now follow your MCP Controls (and can be chosen one by one with the new Rank Math SEO addon), plus redirection, 404 and bulk SEO fix tools.

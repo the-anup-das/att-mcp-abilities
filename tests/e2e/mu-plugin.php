@@ -8,3 +8,16 @@
 remove_action( 'admin_init', '_maybe_update_core' );
 remove_action( 'admin_init', '_maybe_update_plugins' );
 remove_action( 'admin_init', '_maybe_update_themes' );
+
+// Mail never leaves the throwaway site: wp_mail() is answered here, and the last 20
+// messages are kept in the option att_e2e_mail_log for the tests to look at.
+add_filter( 'pre_wp_mail', function ( $return, $atts ) {
+	if ( null !== $return ) {
+		return $return;
+	}
+	$log   = get_option( 'att_e2e_mail_log', array() );
+	$log   = is_array( $log ) ? $log : array();
+	$log[] = array( 'to' => $atts['to'], 'subject' => $atts['subject'], 'message' => substr( (string) $atts['message'], 0, 4000 ) );
+	update_option( 'att_e2e_mail_log', array_slice( $log, -20 ), false );
+	return true;
+}, 5, 2 );

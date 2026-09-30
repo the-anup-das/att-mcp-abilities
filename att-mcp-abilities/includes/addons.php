@@ -60,6 +60,12 @@ function att_mcp_addons() {
             'detect'      => 'att_mcp_detect_code_snippets',
             'groups'      => array( 'Code Snippets' ),
         ),
+        'quickcal' => array(
+            'label'       => __( 'QuickCal', 'att-mcp-abilities' ),
+            'description' => __( 'Set up appointment booking with QuickCal: calendars, weekly hours, special dates and closed days, the booking form, settings and emails; see free time slots, and book, approve or cancel appointments.', 'att-mcp-abilities' ),
+            'detect'      => 'att_mcp_detect_quickcal',
+            'groups'      => array( 'QuickCal' ),
+        ),
         'rank_math' => array(
             'label'       => __( 'Rank Math SEO', 'att-mcp-abilities' ),
             'description' => __( "Choose which of Rank Math's own MCP tools agents may use (site audit and fixes, post analysis, SEO scores, settings, sitemaps, links, redirections, 404 log, Search Console, AI Visibility), and add fix tools for redirections and the 404 log.", 'att-mcp-abilities' ),
@@ -94,6 +100,7 @@ function att_mcp_detect_generatepress() { return function_exists( 'generate_get_
 function att_mcp_detect_elementor()     { return class_exists( '\Elementor\Plugin' ); }
 function att_mcp_detect_code_snippets() { return class_exists( '\Code_Snippets\Snippet' ); }
 function att_mcp_detect_rank_math()     { return defined( 'RANK_MATH_VERSION' ); }
+function att_mcp_detect_quickcal()      { return defined( 'QUICKCAL_VERSION' ); }
 
 /** Is the addon's target plugin/theme present on this site? */
 function att_mcp_addon_is_available( $key ) {

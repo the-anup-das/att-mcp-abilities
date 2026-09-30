@@ -3,7 +3,7 @@
  * Plugin Name:       ATT MCP Abilities
  * Plugin URI:        https://github.com/the-anup-das/att-mcp-abilities
  * Description:      Lets AI agents (Claude, Cursor, Codex…) read and — only where you allow it — build, edit, speed up and optimise (SEO) your site through the WordPress Abilities API and MCP Adapter, with per-ability toggles, read-only mode, undo, and an audit log.
- * Version:           1.11.0
+ * Version:           1.12.0
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            ATT
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'ATT_MCP_VERSION', '1.11.0' );
+define( 'ATT_MCP_VERSION', '1.12.0' );
 define( 'ATT_MCP_FILE', __FILE__ );
 define( 'ATT_MCP_OPTION', 'att_mcp_abilities' );
 define( 'ATT_MCP_ADDONS_OPTION', 'att_mcp_addons' );
@@ -54,6 +54,7 @@ require_once ATT_MCP_DIR . 'includes/abilities/site-editor.php';
 require_once ATT_MCP_DIR . 'includes/abilities/snippets.php';
 require_once ATT_MCP_DIR . 'includes/abilities/generatepress.php';
 require_once ATT_MCP_DIR . 'includes/abilities/elementor.php';
+require_once ATT_MCP_DIR . 'includes/abilities/quickcal.php';
 require_once ATT_MCP_DIR . 'includes/abilities/rank-math.php';
 require_once ATT_MCP_DIR . 'includes/abilities/advanced.php';
 
@@ -98,6 +99,7 @@ function att_mcp_register_all_abilities() {
     att_mcp_register_snippets_abilities();
     att_mcp_register_generatepress_abilities();
     att_mcp_register_elementor_abilities();
+    att_mcp_register_quickcal_abilities();
     att_mcp_register_rank_math_abilities();
     att_mcp_register_advanced_abilities();
 }

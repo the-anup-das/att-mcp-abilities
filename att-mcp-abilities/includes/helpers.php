@@ -119,10 +119,11 @@ function att_mcp_filter_untrusted( $value ) {
 /**
  * Shared secret-key pattern (see also att_mcp_is_secret_name() in dispatch.php).
  * Also covers names like cf_apitoken (Cloudflare), object-pswd (LiteSpeed object
- * cache) and sk_b64 (the QUIC.cloud private key in LiteSpeed's cloud summary).
+ * cache), sk_b64 (the QUIC.cloud private key in LiteSpeed's cloud summary) and
+ * quickcal_feed_hash (the key of QuickCal's private appointment feed).
  */
 function att_mcp_secret_pattern() {
-    return '/(secret|password|passwd|pswd|_pwd|(^|[_-])pass$|_key$|_token|apitoken|token$|_salt|nonce|smtp|private[_-]?key|client[_-]?secret|api[_-]?key|auth[_-]?key|license|credential|sk_b64)/i';
+    return '/(secret|password|passwd|pswd|_pwd|(^|[_-])pass$|_key$|_token|apitoken|token$|_salt|nonce|smtp|private[_-]?key|client[_-]?secret|api[_-]?key|auth[_-]?key|license|credential|sk_b64|feed[_-]?hash)/i';
 }
 
 /**

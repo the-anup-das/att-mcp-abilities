@@ -153,6 +153,10 @@ function att_mcp_ability_registry() {
         );
     }
 
+    if ( att_mcp_detect_quickcal() && function_exists( 'att_mcp_quickcal_registry' ) ) {
+        // QUICKCAL (appointment booking).
+        $abilities += att_mcp_quickcal_registry();
+    }
     if ( att_mcp_detect_rank_math() && function_exists( 'att_mcp_rank_math_registry' ) ) {
         // RANK MATH: its own tools (rank-math/…, governed) + the fix tools this plugin adds.
         $abilities += att_mcp_rank_math_registry();
