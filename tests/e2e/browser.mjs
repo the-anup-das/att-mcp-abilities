@@ -56,11 +56,14 @@ const SETTINGS = `${BASE}/wp-admin/admin.php?page=att-mcp-abilities`;
 
 console.log('== Login');
 await go(`${BASE}/wp-login.php?redirect_to=${encodeURIComponent(SETTINGS)}`);
-await page.type('#user_login', 'admin');
-await page.type('#user_pass', 'password');
+// Fill the fields directly: typing races the login page's own script, which focuses and
+// selects the username field 200 ms after load (the rest of the password then lands there).
+await page.$eval('#user_login', (el) => { el.value = 'admin'; });
+await page.$eval('#user_pass', (el) => { el.value = 'password'; });
 await Promise.all([page.waitForNavigation({ waitUntil: 'load', timeout: 60000 }), page.click('#wp-submit')]);
 await hideTestBadge();
-check('logged in to wp-admin', page.url().includes('page=att-mcp-abilities'), page.url());
+const loginError = await page.$eval('#login_error', (el) => el.textContent.trim()).catch(() => '');
+check('logged in to wp-admin', page.url().includes('page=att-mcp-abilities'), `${page.url()} ${loginError}`.trim());
 
 console.log('== MCP › Settings');
 await page.waitForFunction(() => {
