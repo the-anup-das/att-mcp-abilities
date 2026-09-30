@@ -170,6 +170,34 @@ switch ( $phase ) {
 			$r2 = att_mcp_seo_read( $key, $b2 );
 			t_ok( '... one undo reverts the whole batch', ! is_wp_error( $u ) && '' === $r1['title'] && '' === $r1['focus_keyword'] && '' === $r2['description'], is_wp_error( $u ) ? $u : array( $r1, $r2 ) );
 
+			// The SEO plugin's OWN MCP tools (if it has any) follow the MCP Controls too.
+			$own   = array();
+			$known = att_mcp_governed_known();
+			$seen  = (array) get_option( 'att_mcp_seen_abilities', array() );
+			foreach ( wp_get_abilities() as $ability ) {
+				$n = $ability->get_name();
+				if ( 0 !== strpos( $n, 'core/' ) && '' !== att_mcp_governing_addon( $n, array( 'meta' => array( 'mcp' => $ability->get_meta_item( 'mcp' ), 'public' => $ability->get_meta_item( 'public' ) ) ) ) ) {
+					$own[] = $n;
+				}
+			}
+			if ( ! $own ) {
+				echo "  note  {$slug} registers no MCP tools of its own here\n";
+			} else {
+				$unlisted = array_values( array_filter( $own, function ( $n ) use ( $seen, $known ) { return ! isset( $seen[ $n ] ) && ! isset( $known[ $n ] ); } ) );
+				t_ok( 'its own MCP tools (' . count( $own ) . ') are governed and listed in MCP > Settings', ! $unlisted, $unlisted );
+			}
+			if ( 'aioseo' === $key && wp_has_ability( 'aioseo-posts/seo-data-update' ) ) {
+				att_mcp_mcp_context( 'enter' );
+				$r = t_run( 'aioseo-posts/seo-data-update', array( 'postId' => $id, 'title' => 'Title set by the AIOSEO tool' ) );
+				att_mcp_mcp_context( 'leave' );
+				t_ok( "... e.g. All in One SEO's own update tool, over MCP", is_array( $r ) && 'Title set by the AIOSEO tool' === att_mcp_seo_read( 'aioseo', $id )['title'], $r );
+				$list = t_run( 'att/list-changes', array( 'limit' => 1 ) );
+				$c    = is_array( $list ) ? $list['changes'][0] : array( 'ability' => '', 'items' => array() );
+				t_ok( '... recorded for undo, its own table included', 'aioseo-posts/seo-data-update' === $c['ability'] && in_array( 'aioseo_post', wp_list_pluck( $c['items'], 'type' ), true ), $c );
+				$u = t_run( 'att/undo-change' );
+				t_ok( '... so undo restores the title', ! is_wp_error( $u ) && '' === att_mcp_seo_read( 'aioseo', $id )['title'], $u );
+			}
+
 			$login  = 'int_author_' . $key . '_' . wp_rand( 1000, 999999 );
 			$author = wp_insert_user( array( 'user_login' => $login, 'user_pass' => wp_generate_password(), 'user_email' => $login . '@example.com', 'role' => 'author' ) );
 			t_ok( 'test author created', is_int( $author ), $author );
@@ -211,7 +239,9 @@ switch ( $phase ) {
 	case 'rm-tools':
 		// Rank Math's own MCP tools while the Rank Math addon is off: available as
 		// Rank Math ships them, but under the MCP Controls, logged and undoable.
+		// The calls below are made as an MCP client's tool call (what MCP Adapter marks).
 		global $wpdb;
+		att_mcp_mcp_context( 'enter' );
 		$known   = att_mcp_governed_known();
 		$missing = array();
 		foreach ( array_keys( $known ) as $name ) {
@@ -291,6 +321,14 @@ switch ( $phase ) {
 		$r = t_run( 'rank-math/set-website-identity', array( 'website_name' => '***redacted***' ) );
 		t_ok( 'a redacted placeholder cannot be written through Rank Math', 'att_mcp_redacted_value' === t_code( $r ), $r );
 
+		// Outside an MCP call (Rank Math using its own tools) nothing is logged, limited or refused.
+		att_mcp_mcp_context( 'leave' );
+		$before = $wpdb->get_var( $wpdb->prepare( 'SELECT MAX(id) FROM %i', att_mcp_audit_table() ) );
+		update_option( 'att_mcp_controls', array_merge( att_mcp_get_controls(), array( 'writes_paused' => true ) ) );
+		$r = t_run( 'rank-math/get-robots-txt' );
+		t_ok( "Rank Math's own (non-MCP) use of its tools is left alone", is_array( $r ) && $before === $wpdb->get_var( $wpdb->prepare( 'SELECT MAX(id) FROM %i', att_mcp_audit_table() ) ), $r );
+		update_option( 'att_mcp_controls', array_merge( att_mcp_get_controls(), array( 'writes_paused' => false ) ) );
+
 		// Next phase: the Rank Math addon on, with one of its write tools switched off.
 		$addons              = (array) get_option( 'att_mcp_addons', array() );
 		$addons['rank_math'] = true;
@@ -313,6 +351,9 @@ switch ( $phase ) {
 		t_ok( 'the Rank Math card shows as detected, with its own tools and the fix tools', false !== strpos( $html, 'data-addon-card="rank_math"' ) && false !== strpos( $html, 'att_mcp_abilities[rank-math/audit-site-seo]' ) && false !== strpos( $html, 'att_mcp_abilities[att/rank-math-save-redirection]' ) );
 		t_ok( '... explaining how its tools are controlled', false !== strpos( $html, 'att-addon-govern' ) );
 		t_ok( '... and the switch state of each tool', 1 === preg_match( '#name="att_mcp_abilities\[rank-math/set-sitemap-settings\]"[^>]*>#', $html, $m ) && false === strpos( $m[0], 'checked' ) );
+		if ( wp_has_ability( 'core/get-site-info' ) && true === wp_get_ability( 'core/get-site-info' )->get_meta_item( 'public' ) ) {
+			t_ok( "WordPress's own MCP tools are listed in the Other MCP tools card", false !== strpos( $html, 'data-addon-card="other_mcp"' ) && false !== strpos( $html, 'att_mcp_abilities[core/get-site-info]' ) );
+		}
 		break;
 
 	case 'rm-govern':
@@ -322,11 +363,12 @@ switch ( $phase ) {
 		flush_rewrite_rules( false );
 
 		// The Rank Math addon is on: per-tool toggles apply, and the fix tools work.
+		att_mcp_mcp_context( 'enter' );
 		$a   = wp_get_ability( 'rank-math/set-sitemap-settings' );
 		$mcp = $a ? $a->get_meta_item( 'mcp' ) : null;
-		t_ok( 'a Rank Math tool switched off is hidden from MCP and the REST API', $a && empty( $mcp['public'] ) && false === $a->get_meta_item( 'show_in_rest' ), $mcp );
+		t_ok( 'a Rank Math tool switched off is hidden from MCP (its REST exposure is Rank Math\'s own business)', $a && empty( $mcp['public'] ) && true === $a->get_meta_item( 'show_in_rest' ), $mcp );
 		$r = t_run( 'rank-math/set-sitemap-settings', array( 'include_images' => true ) );
-		t_ok( '... and refuses to run', 'att_mcp_ability_disabled' === t_code( $r ), $r );
+		t_ok( '... and refuses to run over MCP', 'att_mcp_ability_disabled' === t_code( $r ), $r );
 		$r = t_run( 'rank-math/get-settings' );
 		t_ok( 'a Rank Math tool left on runs', is_array( $r ) && empty( $r['error'] ), $r );
 

@@ -82,9 +82,11 @@ Enable the **History & undo** abilities and ask the agent to "undo the last chan
 
 The REST tools refuse user, application-password, plugin and settings routes, the option tools refuse core and security options, and this plugin and MCP Adapter cannot be deactivated through MCP. Beyond that an agent can only do what the connected WordPress user may do.
 
-= Rank Math has its own MCP tools. How do they work with this plugin? =
+= Other plugins add their own MCP tools. How do they work with this plugin? =
 
-Rank Math registers its own MCP tools (29 in Rank Math 1.0.279), and MCP Adapter offers them over the same connection as this plugin's. The kill switch, read-only mode, write limit, activity log and undo in MCP › Settings apply to them as well. To choose them one by one, enable the **Rank Math SEO** addon: its tools are then listed with their own switches (reads on, writes off by default), and a tool you switch off is hidden from agents and refuses to run. The addon also adds tools to save and delete redirections and to clear the 404 log, so an agent can fix what Rank Math's audit reports. Per-post fixes (SEO title, description, focus keyword) use "Update SEO Meta" or "Bulk Update SEO Meta".
+Some plugins register MCP tools of their own — Rank Math (29 in 1.0.279), All in One SEO, Yoast SEO — and so does WordPress 7.1. MCP Adapter offers them over the same connection as this plugin's. When an agent calls them over MCP, the kill switch, read-only mode, write limit, activity log and undo in MCP › Settings apply to them as well; a plugin using its own tools in its own screens is not affected. To choose them one by one, enable the **Rank Math SEO** addon (for Rank Math's) or the **Other MCP tools** addon (for everyone else's): each tool then gets its own switch (reads on, writes off by default), and a tool you switch off is hidden from agents and refuses to run.
+
+The Rank Math addon also adds tools to save and delete redirections and to clear the 404 log, so an agent can fix what Rank Math's audit reports. Per-post fixes (SEO title, description, focus keyword) use "Update SEO Meta" or "Bulk Update SEO Meta".
 
 = Which cache and SEO plugins are supported? =
 

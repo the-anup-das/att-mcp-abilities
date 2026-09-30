@@ -58,6 +58,7 @@ function att_mcp_group_label( $group ) {
         'Elementor'     => __( 'Elementor', 'att-mcp-abilities' ),
         'Rank Math'       => __( "Rank Math's own tools", 'att-mcp-abilities' ),
         'Rank Math Fixes' => __( 'Redirection & 404 fixes (added by this plugin)', 'att-mcp-abilities' ),
+        'Other MCP Tools' => __( "Other plugins' and WordPress's tools", 'att-mcp-abilities' ),
         'Advanced'      => __( 'Advanced', 'att-mcp-abilities' ),
     );
     return isset( $labels[ $group ] ) ? $labels[ $group ] : $group;
@@ -91,6 +92,12 @@ function att_mcp_settings_page() {
     }
 
     $registry = att_mcp_ability_registry();
+    foreach ( array_keys( $registry ) as $key ) {
+        // Other plugins' tools are listed while they exist (their plugin is active).
+        if ( 0 !== strpos( $key, 'att/' ) && ! wp_has_ability( $key ) ) {
+            unset( $registry[ $key ] );
+        }
+    }
     $settings = att_mcp_get_settings();
     $groups   = array();
     foreach ( $registry as $key => $cfg ) {
@@ -106,15 +113,19 @@ function att_mcp_settings_page() {
         'Posts' => '📝', 'Pages' => '📄', 'Content' => '🗂️', 'Taxonomy' => '🏷️', 'Comments' => '💬',
         'Media' => '🖼️', 'Users' => '👥', 'Search' => '🔍', 'Menus' => '🧭', 'Site' => '🌐', 'Performance' => '🚀', 'SEO' => '📈', 'History' => '↩️',
         'Design' => '🎨', 'Site Editor' => '🖌️', 'GeneratePress' => '🧱', 'Code Snippets' => '🧩',
-        'Elementor' => '⚡', 'Rank Math' => '🏆', 'Rank Math Fixes' => '🔀', 'Advanced' => '🛠️',
+        'Elementor' => '⚡', 'Rank Math' => '🏆', 'Rank Math Fixes' => '🔀', 'Other MCP Tools' => '🔌', 'Advanced' => '🛠️',
     );
 
-    // Stats reflect EFFECTIVE (addon-gated) state.
+    // Stats reflect EFFECTIVE (addon-gated) state. Other plugins' tools whose addon is
+    // off are available as their plugin ships them (unless writes are paused).
     $total   = count( $registry );
     $enabled = 0;
     $writes  = 0;
     foreach ( $registry as $key => $cfg ) {
-        if ( att_mcp_is_enabled( $key ) ) {
+        $addon_key = att_mcp_addon_for_group( $cfg['group'] );
+        $governed  = 0 !== strpos( $key, 'att/' ) && '' !== $addon_key && ! att_mcp_addon_is_enabled( $addon_key );
+        $on        = $governed ? ! ( 'write' === $cfg['access'] && att_mcp_writes_paused() ) : att_mcp_is_enabled( $key );
+        if ( $on ) {
             $enabled++;
             if ( 'write' === $cfg['access'] ) {
                 $writes++;
@@ -209,26 +220,30 @@ function att_mcp_settings_page() {
                         <div class="att-addon-desc"><?php echo esc_html( isset( $addon['description'] ) ? $addon['description'] : '' ); ?></div>
                         <?php
                         if ( ! empty( $addon['governs'] ) && $available ) :
-                            // This addon controls another plugin's own MCP tools (governance.php).
+                            // This addon controls other plugins' own MCP tools (governance.php).
                             $own_total  = 0;
                             $own_writes = 0;
-                            foreach ( att_mcp_ability_registry() as $gkey => $gcfg ) {
-                                if ( 0 === strpos( $gkey, $addon['governs'] ) ) {
-                                    $own_total++;
-                                    $own_writes += 'write' === $gcfg['access'] ? 1 : 0;
+                            foreach ( (array) $addon['groups'] as $g ) {
+                                foreach ( isset( $groups[ $g ] ) ? $groups[ $g ] : array() as $gkey => $gcfg ) {
+                                    if ( 0 !== strpos( $gkey, 'att/' ) ) {
+                                        $own_total++;
+                                        $own_writes += 'write' === $gcfg['access'] ? 1 : 0;
+                                    }
                                 }
                             }
                             ?>
+                            <?php if ( $own_total ) : ?>
                         <div class="att-addon-desc att-addon-govern">
                             <?php
                             if ( $active ) {
-                                esc_html_e( 'Its own tools that you switch off below are hidden from agents and refuse to run. The ones you allow follow the MCP Controls above and are logged in MCP › Activity; changes made by its write tools can be undone.', 'att-mcp-abilities' );
+                                esc_html_e( 'Tools you switch off below are hidden from agents and refuse to run over MCP. The ones you allow follow the MCP Controls above and are logged in MCP › Activity; changes made by their write tools can be undone.', 'att-mcp-abilities' );
                             } else {
-                                /* translators: 1: plugin name, 2: number of tools, 3: number of them that change things */
-                                echo esc_html( sprintf( __( '%1$s adds %2$d MCP tools of its own (%3$d can change your site). While this addon is off they stay available to agents as %1$s ships them — the kill switch, read-only mode, write limit, activity log and undo above still apply to them. Turn the addon on to choose them one by one.', 'att-mcp-abilities' ), $addon['label'], $own_total, $own_writes ) );
+                                /* translators: 1: number of tools, 2: number of them that change things */
+                                echo esc_html( sprintf( __( 'These %1$d MCP tools (%2$d can change your site) are offered to agents by the plugins that add them. While this addon is off they stay available as those plugins ship them — the kill switch, read-only mode, write limit, activity log and undo above still apply to them. Turn the addon on to choose them one by one.', 'att-mcp-abilities' ), $own_total, $own_writes ) );
                             }
                             ?>
                         </div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                     <?php if ( ! $is_core ) : ?>

@@ -351,7 +351,8 @@ function att_mcp_execute_rank_math_save_redirection( $input ) {
         $url_to = '';
     } elseif ( '' === $url_to ) {
         return new WP_Error( 'att_mcp_bad_input', '"url_to" is required for 301, 302 and 307 redirects.' );
-    } elseif ( '/' !== substr( $url_to, 0, 1 ) && ! wp_http_validate_url( $url_to ) ) {
+    } elseif ( '/' !== substr( $url_to, 0, 1 ) && ( ! preg_match( '#^https?://#i', $url_to ) || '' === (string) wp_parse_url( $url_to, PHP_URL_HOST ) || preg_match( '#\s#', $url_to ) ) ) {
+        // A Location header only — nothing is fetched, so no DNS/SSRF check is needed.
         return new WP_Error( 'att_mcp_bad_input', '"url_to" must be an http(s) URL or a path starting with "/".' );
     }
     $status = isset( $input['status'] ) ? (string) $input['status'] : ( $existing && 'trashed' !== $existing['status'] ? (string) $existing['status'] : 'active' );

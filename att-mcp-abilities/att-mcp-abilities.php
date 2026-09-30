@@ -69,7 +69,9 @@ add_action( 'admin_post_att_mcp_clear_audit',   'att_mcp_handle_clear_audit' );
 add_action( 'att_mcp_daily_digest',             'att_mcp_send_daily_digest' );
 add_action( 'wp_abilities_api_categories_init', 'att_mcp_register_ability_category' );
 add_action( 'wp_abilities_api_init',            'att_mcp_register_all_abilities' );
-add_filter( 'wp_register_ability_args',         'att_mcp_govern_ability_args', 20, 2 ); // other plugins' MCP tools (Rank Math) follow the MCP Controls
+add_filter( 'wp_register_ability_args',         'att_mcp_govern_ability_args', 20, 2 ); // other plugins' MCP tools follow the MCP Controls
+add_filter( 'mcp_adapter_pre_tool_call',        'att_mcp_on_mcp_tool_call', PHP_INT_MAX ); // an MCP client's call starts…
+add_filter( 'mcp_adapter_tool_call_result',     'att_mcp_on_mcp_tool_result', 1 );         // …and ends
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'att_mcp_plugin_action_links' );
 
 function att_mcp_register_all_abilities() {

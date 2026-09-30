@@ -96,7 +96,12 @@ function att_mcp_capture( $type, $target ) {
             $post_id = (int) $target[0];
             $key     = (string) $target[1];
             $existed = metadata_exists( 'post', $post_id, $key );
-            return array( 'type' => 'post_meta', 'target' => array( $post_id, $key ), 'existed' => $existed, 'value' => $existed ? get_post_meta( $post_id, $key, true ) : null );
+            $item    = array( 'type' => 'post_meta', 'target' => array( $post_id, $key ), 'existed' => $existed, 'value' => $existed ? get_post_meta( $post_id, $key, true ) : null );
+            $all     = $existed ? get_post_meta( $post_id, $key, false ) : array();
+            if ( count( $all ) > 1 ) {
+                $item['values'] = $all; // a key with several rows: all of them are restored
+            }
+            return $item;
 
         case 'custom_css':
             $stylesheet = $target ? (string) $target : get_stylesheet();
@@ -242,10 +247,20 @@ function att_mcp_restore_item( $item ) {
 
         case 'post_meta':
             list( $post_id, $key ) = $item['target'];
-            if ( $existed ) {
-                update_post_meta( (int) $post_id, $key, wp_slash( $value ) );
+            $post_id               = (int) $post_id;
+            if ( isset( $item['values'] ) && is_array( $item['values'] ) ) {
+                // Several rows under one key: put exactly those rows back.
+                delete_post_meta( $post_id, $key );
+                foreach ( $item['values'] as $row ) {
+                    add_post_meta( $post_id, $key, wp_slash( $row ) );
+                }
+            } elseif ( $existed && count( get_post_meta( $post_id, $key, false ) ) > 1 ) {
+                delete_post_meta( $post_id, $key );
+                add_post_meta( $post_id, $key, wp_slash( $value ) );
+            } elseif ( $existed ) {
+                update_post_meta( $post_id, $key, wp_slash( $value ) );
             } else {
-                delete_post_meta( (int) $post_id, $key );
+                delete_post_meta( $post_id, $key );
             }
             if ( 0 === strpos( $key, '_elementor' ) && function_exists( 'att_mcp_elementor_clear_cache' ) ) {
                 att_mcp_elementor_clear_cache();

@@ -81,7 +81,9 @@ function att_mcp_dispatch( $key, $callback, $input, $opts = array() ) {
 
     att_mcp_current_ability( $key );
     $recording = ! empty( $opts['record'] ) && 'write' === $access && function_exists( 'att_mcp_recorder_start' );
+    $captured  = array();
     if ( $recording ) {
+        $captured = att_mcp_governed_pre_capture( $key, $input ); // state the recorder cannot see (a plugin's own table)
         att_mcp_recorder_start();
     }
     $start = microtime( true );
@@ -94,8 +96,14 @@ function att_mcp_dispatch( $key, $callback, $input, $opts = array() ) {
     if ( $recording ) {
         // Whatever the outcome, anything that changed can be undone.
         $changed = att_mcp_recorder_stop();
+        foreach ( $captured as $item ) {
+            if ( att_mcp_capture_changed( $item ) ) {
+                $changed[] = $item;
+            }
+        }
         if ( $changed ) {
-            att_mcp_record_change( $changed, isset( $registry[ $key ]['label'] ) ? $registry[ $key ]['label'] : $key );
+            $label = isset( $registry[ $key ]['label'] ) ? $registry[ $key ]['label'] : $key;
+            att_mcp_record_change( $changed, $label . ' (' . att_mcp_ability_provider( $key ) . ')' );
         }
     }
     att_mcp_current_ability( '' );

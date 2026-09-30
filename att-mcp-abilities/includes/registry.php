@@ -157,6 +157,10 @@ function att_mcp_ability_registry() {
         // RANK MATH: its own tools (rank-math/…, governed) + the fix tools this plugin adds.
         $abilities += att_mcp_rank_math_registry();
     }
+    if ( function_exists( 'att_mcp_other_mcp_registry' ) ) {
+        // OTHER MCP TOOLS: other plugins' and core's tools seen on this site (governed).
+        $abilities += att_mcp_other_mcp_registry();
+    }
 
     /**
      * Filter the full ability registry. Third-party addons add their ability
@@ -220,6 +224,9 @@ function att_mcp_sanitize_settings( $input ) {
         $addon = function_exists( 'att_mcp_addon_for_group' ) ? att_mcp_addon_for_group( $cfg['group'] ) : '';
         if ( $addon && ! att_mcp_addon_is_available( $addon ) ) {
             continue; // not rendered on the form — keep what was saved
+        }
+        if ( 0 !== strpos( $key, 'att/' ) && function_exists( 'wp_has_ability' ) && ! wp_has_ability( $key ) ) {
+            continue; // another plugin's tool whose plugin is inactive — not on the form either
         }
         $clean[ $key ] = ! empty( $input[ $key ] );
     }

@@ -67,6 +67,13 @@ function att_mcp_addons() {
             'groups'      => array( 'Rank Math', 'Rank Math Fixes' ),
             'governs'     => 'rank-math/', // other plugin's abilities this addon controls (see governance.php)
         ),
+        'other_mcp' => array(
+            'label'       => __( 'Other MCP tools', 'att-mcp-abilities' ),
+            'description' => __( 'MCP tools that other plugins and WordPress itself offer AI agents on this connection (for example Yoast SEO, All in One SEO, WordPress core). Choose them one by one.', 'att-mcp-abilities' ),
+            'detect'      => 'att_mcp_detect_other_mcp',
+            'groups'      => array( 'Other MCP Tools' ),
+            'governs'     => '*', // every other ability MCP Adapter exposes (see governance.php)
+        ),
         'advanced' => array(
             'label'       => __( 'Advanced (site administration)', 'att-mcp-abilities' ),
             'description' => __( 'Full WordPress REST API access as the connected user, and installing/activating plugins and themes from WordPress.org. Powerful — enable only for agents you fully trust.', 'att-mcp-abilities' ),

@@ -387,7 +387,7 @@ t_ok( 'redaction keeps booleans, numbers and empty strings (strict output schema
 t_ok( "other plugins' error results are logged as errors", 'error' === att_mcp_audit_describe( array( 'error' => array( 'code' => 'no_fields', 'message' => 'Nothing to do' ) ) )[0] && 'ok' === att_mcp_audit_describe( array( 'fixed' => false, 'summary' => 'x' ) )[0] );
 
 /* ------------------------------------------------------------------ */
-t_section( "Other plugins' MCP tools follow the MCP Controls (simulated rank-math/ tool)" );
+t_section( "Other plugins' MCP tools follow the MCP Controls (simulated tools)" );
 t_ok( 'no Rank Math entries while Rank Math is inactive', ! array_filter( array_keys( att_mcp_ability_registry() ), function ( $k ) { return 0 === strpos( $k, 'rank-math/' ) || 0 === strpos( $k, 'att/rank-math-' ); } ) && ! att_mcp_addon_is_available( 'rank_math' ) );
 $gov_calls = 0;
 $gov_args  = array(
@@ -405,30 +405,67 @@ $gov_args  = array(
 		return array( 'saved' => true, 'secret_token' => 'abc' );
 	},
 );
-update_option( 'att_e2e_gov_opt', 'before' );
+$last_audit = function () use ( $wpdb ) {
+	return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id DESC LIMIT 1', att_mcp_audit_table() ) );
+};
 $g = att_mcp_govern_ability_args( $gov_args, 'rank-math/att-e2e-fake' );
 t_ok( 'while its addon is off, a governed tool stays exposed as its plugin ships it', true === $g['meta']['mcp']['public'] && true === $g['meta']['show_in_rest'] && array() === $g['input_schema']['default'], $g['meta'] );
+$before = $last_audit();
+$res    = call_user_func( $g['execute_callback'], array( 'v' => 'own-use' ) );
+t_ok( "the plugin's own (non-MCP) use of its tool is left alone", 1 === $gov_calls && 'abc' === $res['secret_token'] && $before == $last_audit(), $res ); // phpcs:ignore Universal.Operators.StrictComparisons -- same row object
+update_option( 'att_e2e_gov_opt', 'before' );
+delete_post_meta( $page_id, 'att_e2e_gov_meta' );
+att_mcp_mcp_context( 'enter' );
 $res = call_user_func( $g['execute_callback'], array( 'v' => 'after' ) );
-t_ok( '... but runs through the dispatcher (output redacted)', 1 === $gov_calls && is_array( $res ) && '***redacted***' === $res['secret_token'] && 'after' === get_option( 'att_e2e_gov_opt' ), $res );
-$last = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id DESC LIMIT 1', att_mcp_audit_table() ) );
+att_mcp_mcp_context( 'leave' );
+t_ok( 'an MCP call runs through the dispatcher (output redacted)', 2 === $gov_calls && is_array( $res ) && '***redacted***' === $res['secret_token'] && 'after' === get_option( 'att_e2e_gov_opt' ), $res );
+$last = $last_audit();
 t_ok( '... is logged as a write', $last && 'rank-math/att-e2e-fake' === $last->ability && 'write' === $last->access && 'ok' === $last->status, $last );
 $list    = t_run( 'att/list-changes', array( 'limit' => 1 ) );
-$c       = is_array( $list ) ? $list['changes'][0] : array( 'ability' => '', 'items' => array() );
+$c       = is_array( $list ) ? $list['changes'][0] : array( 'ability' => '', 'label' => '', 'items' => array() );
 $targets = wp_json_encode( wp_list_pluck( $c['items'], 'target' ) );
-t_ok( '... and its option + post meta changes are recorded (transients are not)', 'rank-math/att-e2e-fake' === $c['ability'] && 2 === count( $c['items'] ) && false !== strpos( $targets, 'att_e2e_gov_opt' ) && false !== strpos( $targets, 'att_e2e_gov_meta' ), $c );
+t_ok( '... and its option + post meta changes are recorded (transients are not)', 'rank-math/att-e2e-fake' === $c['ability'] && false !== strpos( $c['label'], '(Rank Math)' ) && 2 === count( $c['items'] ) && false !== strpos( $targets, 'att_e2e_gov_opt' ) && false !== strpos( $targets, 'att_e2e_gov_meta' ), $c );
 $u = t_run( 'att/undo-change' );
 t_ok( 'undo restores what the governed tool changed', ! is_wp_error( $u ) && 'before' === get_option( 'att_e2e_gov_opt' ) && ! metadata_exists( 'post', $page_id, 'att_e2e_gov_meta' ), $u );
 $seen = (array) get_option( 'att_mcp_seen_abilities', array() );
-t_ok( 'a tool this plugin does not describe is remembered for MCP > Settings', isset( $seen['rank-math/att-e2e-fake'] ) && false === $seen['rank-math/att-e2e-fake']['readonly'], $seen );
-delete_option( 'att_mcp_seen_abilities' );
+t_ok( 'a tool this plugin does not describe is remembered for MCP > Settings', isset( $seen['rank-math/att-e2e-fake'] ) && false === $seen['rank-math/att-e2e-fake']['readonly'] && 'rank_math' === $seen['rank-math/att-e2e-fake']['addon'], $seen );
+
 set_controls( array( 'writes_paused' => true ) );
 $g = att_mcp_govern_ability_args( $gov_args, 'rank-math/att-e2e-fake' );
-t_ok( 'read-only mode hides a governed write tool from MCP and REST', false === $g['meta']['mcp']['public'] && false === $g['meta']['show_in_rest'] && 'att_mcp_writes_paused' === t_code( call_user_func( $g['execute_callback'], array() ) ) && 1 === $gov_calls );
+att_mcp_mcp_context( 'enter' );
+$r = call_user_func( $g['execute_callback'], array() );
+att_mcp_mcp_context( 'leave' );
+t_ok( 'read-only mode hides a governed write tool from MCP and refuses it there', false === $g['meta']['mcp']['public'] && true === $g['meta']['show_in_rest'] && 'att_mcp_writes_paused' === t_code( $r ) && 2 === $gov_calls, $r );
+call_user_func( $g['execute_callback'], array( 'v' => 'own-use' ) );
+t_ok( "... while the plugin's own use keeps working", 3 === $gov_calls );
 set_controls( array( 'writes_paused' => false, 'active' => false ) );
 $g = att_mcp_govern_ability_args( $gov_args, 'rank-math/att-e2e-fake' );
-t_ok( 'the kill switch hides and stops governed tools', false === $g['meta']['mcp']['public'] && 'att_mcp_disabled' === t_code( call_user_func( $g['execute_callback'], array() ) ) && 1 === $gov_calls );
+att_mcp_mcp_context( 'enter' );
+$r = call_user_func( $g['execute_callback'], array() );
+att_mcp_mcp_context( 'leave' );
+t_ok( 'the kill switch hides and stops governed tools over MCP', false === $g['meta']['mcp']['public'] && 'att_mcp_disabled' === t_code( $r ) && 3 === $gov_calls, $r );
 set_controls( array( 'active' => true ) );
-t_ok( 'abilities of other namespaces are left alone', $gov_args === att_mcp_govern_ability_args( $gov_args, 'other-plugin/tool' ) );
+
+// Any other plugin's (or core's) MCP-exposed tool falls under "Other MCP tools".
+t_ok( "any other plugin's MCP-exposed tool is governed", 'other_mcp' === att_mcp_governing_addon( 'e2e-other/tool', $gov_args ) && 'other_mcp' === att_mcp_governing_addon( 'core/get-site-info', array( 'meta' => array( 'public' => true ) ) ) );
+t_ok( "... but not tools MCP does not expose, nor this plugin's or MCP Adapter's", '' === att_mcp_governing_addon( 'e2e-other/private', array( 'meta' => array( 'show_in_rest' => true ) ) ) && '' === att_mcp_governing_addon( 'core/x', array( 'meta' => array( 'public' => true, 'mcp' => array( 'public' => false ) ) ) ) && '' === att_mcp_governing_addon( 'att/get-posts', $gov_args ) && '' === att_mcp_governing_addon( 'mcp-adapter/execute-ability', $gov_args ) );
+$g    = att_mcp_govern_ability_args( $gov_args, 'e2e-other/tool' );
+$seen = (array) get_option( 'att_mcp_seen_abilities', array() );
+t_ok( '... is remembered for the "Other MCP tools" card', isset( $seen['e2e-other/tool'] ) && 'other_mcp' === $seen['e2e-other/tool']['addon'] && att_mcp_addon_is_available( 'other_mcp' ) && isset( att_mcp_other_mcp_registry()['e2e-other/tool'] ), $seen );
+set_controls( array( 'active' => false ) );
+$g = att_mcp_govern_ability_args( $gov_args, 'e2e-other/tool' );
+t_ok( '... and hidden from MCP by the kill switch', false === $g['meta']['mcp']['public'] );
+set_controls( array( 'active' => true ) );
+delete_option( 'att_mcp_seen_abilities' );
+
+// Undo keeps every row of a meta key that has several.
+add_post_meta( $page_id, 'att_e2e_multi', 'a' );
+add_post_meta( $page_id, 'att_e2e_multi', 'b' );
+$item = att_mcp_capture( 'post_meta', array( $page_id, 'att_e2e_multi' ) );
+update_post_meta( $page_id, 'att_e2e_multi', 'z' );
+att_mcp_restore_item( $item );
+t_ok( 'undo restores every row of a multi-row meta key', array( 'a', 'b' ) === get_post_meta( $page_id, 'att_e2e_multi', false ), get_post_meta( $page_id, 'att_e2e_multi', false ) );
+delete_post_meta( $page_id, 'att_e2e_multi' );
 
 /* ------------------------------------------------------------------ */
 t_section( 'Bulk SEO meta (no SEO plugin installed)' );
