@@ -5,7 +5,7 @@
 > **By ATT ([AnupTechTips](https://anuptechtips.com))**
 
 [![CI](https://github.com/the-anup-das/att-mcp-abilities/actions/workflows/ci.yml/badge.svg)](https://github.com/the-anup-das/att-mcp-abilities/actions/workflows/ci.yml)
-![Version](https://img.shields.io/badge/version-1.12.0-3D7BF7)
+![Version](https://img.shields.io/badge/version-1.12.1-3D7BF7)
 ![WordPress](https://img.shields.io/badge/WordPress-6.9%E2%80%937.1-21759b)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-green)](LICENSE)

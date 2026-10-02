@@ -613,6 +613,14 @@ t_ok( '... but reads still work', ! is_wp_error( t_run( 'att/get-posts' ) ) );
 set_controls( array( 'writes_paused' => false, 'active' => false ) );
 $r = t_run( 'att/get-posts' );
 t_ok( 'kill switch blocks everything', 'att_mcp_disabled' === t_code( $r ), $r );
+// Another plugin switching MCP Adapter's default server off (as Elementor does; mu-plugin.php
+// does it on this site) must not take the endpoint away while MCP is enabled here.
+t_ok( "with MCP off, another plugin's choice to disable MCP Adapter's default server stands", false === apply_filters( 'mcp_adapter_create_default_server', true ) );
+set_controls( array( 'active' => true ) );
+t_ok( '... with MCP on, the default server is kept', true === apply_filters( 'mcp_adapter_create_default_server', true ) );
+add_filter( 'att_mcp_keep_default_server', '__return_false' );
+t_ok( '... unless the site opts out with att_mcp_keep_default_server', false === apply_filters( 'mcp_adapter_create_default_server', true ) );
+remove_filter( 'att_mcp_keep_default_server', '__return_false' );
 set_controls( array( 'active' => true, 'rate_limit' => 2 ) );
 t_run( 'att/set-theme-mod', array( 'key' => 'rl1', 'value' => 1 ) );
 t_run( 'att/set-theme-mod', array( 'key' => 'rl2', 'value' => 1 ) );

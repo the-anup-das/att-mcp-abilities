@@ -4,7 +4,7 @@ Tags: mcp, ai, abilities api, seo, performance
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.12.0
+Stable tag: 1.12.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -66,6 +66,10 @@ For the least privilege, create a dedicated Editor user for AI agents and genera
 = Do I need the MCP Adapter plugin? =
 
 Yes. This plugin registers the abilities; MCP Adapter exposes them to MCP clients. A notice appears on the Plugins screen while it is missing.
+
+= My AI client cannot connect: "No route was found matching the URL and request method" (404). =
+
+The address clients connect to (`/wp-json/mcp/mcp-adapter-default-server`) is MCP Adapter's default server. Make sure the MCP Adapter plugin is active and up to date (0.6 or newer) and that "MCP enabled" is on under MCP › Settings. Some plugins switch that server off for the whole site: Elementor 4.3 does while its own MCP feature is off. Since 1.12.1 this plugin keeps it on while MCP is enabled, and MCP › Connect tells you when the address does not exist.
 
 = The Connect screen says Application Passwords are unavailable. =
 
@@ -136,6 +140,11 @@ The audit log (MCP › Activity) stores, in your own database, the time, ability
 
 == Changelog ==
 
+= 1.12.1 =
+* Fix: AI clients could not connect ("No route was found", 404) on sites where another plugin switches off MCP Adapter's default server, as Elementor 4.3 does while its own MCP feature is off. The server is now kept on while MCP is enabled.
+* New: MCP Adapter is started when it is present only as a library inside another plugin.
+* New: MCP › Connect warns when the address AI clients connect to does not exist on the site.
+
 = 1.12.0 =
 * New: QuickCal addon. Agents can set up appointment booking from scratch: calendars, weekly time slots, special dates and closed days, blocked slots, the booking form, settings and emails. They can also see which slots are free, and book, reschedule, approve and cancel appointments, with QuickCal's own emails to the customer. It is written in QuickCal's own formats and checked against QuickCal's own functions. Every change is undoable, including cancelled appointments and deleted calendars (restored under the same ids).
 * New: "Other MCP tools" addon. The MCP tools of any other plugin, and of WordPress 7.1 itself (All in One SEO, Yoast SEO, core…), now follow the kill switch, read-only mode, write limit, activity log and undo, and can be switched on one by one.
@@ -189,6 +198,9 @@ The audit log (MCP › Activity) stores, in your own database, the time, ability
 * Addon framework, MCP Controls (kill switch, read-only mode, audit log), secret redaction, and the Activity screen.
 
 == Upgrade Notice ==
+
+= 1.12.1 =
+Fixes AI clients failing to connect (404 "No route was found") on sites running Elementor 4.3.
 
 = 1.12.0 =
 New QuickCal addon for setting up appointment booking, and every other plugin's MCP tools now follow your MCP Controls.

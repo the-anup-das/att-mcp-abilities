@@ -39,7 +39,7 @@ function att_mcp_config_page() {
 
     $user        = wp_get_current_user();
     $username    = $user->exists() ? $user->user_login : 'your-wordpress-user-name';
-    $api_url     = untrailingslashit( rest_url( 'mcp/mcp-adapter-default-server' ) );
+    $api_url     = untrailingslashit( rest_url( ltrim( att_mcp_endpoint_route(), '/' ) ) );
     $placeholder = 'replace-with-your-application-password';
     $site_host   = (string) wp_parse_url( home_url(), PHP_URL_HOST );
     $server_key  = 'att-' . trim( preg_replace( '/[^a-z0-9]+/', '-', strtolower( $site_host ) ), '-' );
@@ -79,6 +79,20 @@ function att_mcp_config_page() {
     <div class="att-wrap">
         <?php att_mcp_admin_header( 'config' ); ?>
         <p class="att-desc"><?php esc_html_e( 'Connect an AI client (Claude, Cursor, Codex, Antigravity…) to this site in two steps. Your API URL and username are filled in automatically.', 'att-mcp-abilities' ); ?></p>
+        <?php if ( att_mcp_adapter_active() && ! att_mcp_endpoint_available() ) : ?>
+            <div class="notice notice-error inline att-endpoint-missing"><p>
+                <?php
+                echo wp_kses(
+                    sprintf(
+                        /* translators: %s: the API URL AI clients connect to */
+                        __( '<strong>AI clients cannot connect yet:</strong> the address %s does not exist on this site (they get a 404 "No route was found"). Check that <strong>MCP enabled</strong> is on in MCP › Settings, that the MCP Adapter plugin is active and up to date (0.6 or newer), and that no other plugin switches off the default server of MCP Adapter.', 'att-mcp-abilities' ),
+                        '<code>' . esc_html( $api_url ) . '</code>'
+                    ),
+                    array( 'strong' => array(), 'code' => array() )
+                );
+                ?>
+            </p></div>
+        <?php endif; ?>
 
         <!-- Step 1: Application Password -->
         <div class="att-addon" id="att-mcp-app-passwords">

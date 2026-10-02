@@ -17,7 +17,7 @@ This covers the one-time directory submission and every release after it. The pl
 | Workflow | Runs when | Does |
 |---|---|---|
 | **CI** (`ci.yml`) | Every push and pull request, or on demand: **Actions › CI › Run workflow** | PHP 7.4/8.3 lint, Plugin Check, the end-to-end suite on WordPress 6.9 and the latest release, and builds the zip (download it from the run's **Artifacts**) |
-| **Deploy to WordPress.org** (`deploy.yml`) | A version tag is pushed (e.g. `1.12.0`) | Runs CI, checks that the tag matches the version, publishes to WordPress.org SVN, and creates the GitHub release with the zip |
+| **Deploy to WordPress.org** (`deploy.yml`) | A version tag is pushed (e.g. `1.12.1`) | Runs CI, checks that the tag matches the version, publishes to WordPress.org SVN, and creates the GitHub release with the zip |
 
 **Don't create a GitHub release or a version tag by hand before the plugin is approved.** A version tag starts the WordPress.org deploy, which fails until the SVN repository and secrets exist. The deploy workflow creates each release, zip included, for you.
 
@@ -56,10 +56,10 @@ Each release:
 3. Commit and push to `main`, and wait for CI to go green.
 4. Tag it with the plain version number, no `v`:
    ```bash
-   git tag 1.12.0
-   git push origin 1.12.0
+   git tag 1.12.1
+   git push origin 1.12.1
    ```
-   The **Deploy to WordPress.org** workflow runs the full CI first, checks that the tag matches the version, publishes `att-mcp-abilities/` to `trunk` and `tags/1.12.0`, uploads `.wordpress-org/` to `assets`, and creates a GitHub release with the zip. WordPress.org usually shows the new version within about 15 minutes.
+   The **Deploy to WordPress.org** workflow runs the full CI first, checks that the tag matches the version, publishes `att-mcp-abilities/` to `trunk` and `tags/1.12.1`, uploads `.wordpress-org/` to `assets`, and creates a GitHub release with the zip. WordPress.org usually shows the new version within about 15 minutes.
 
 ### Alternative: manual SVN
 
@@ -72,8 +72,8 @@ cd svn-att
 svn add --force trunk assets
 svn propset svn:mime-type image/png assets/*.png
 svn propset svn:mime-type image/svg+xml assets/*.svg
-svn copy trunk tags/1.12.0
-svn commit -m "Release 1.12.0" --username your-username   # asks for the SVN password
+svn copy trunk tags/1.12.1
+svn commit -m "Release 1.12.1" --username your-username   # asks for the SVN password
 ```
 
 On Windows, [TortoiseSVN](https://tortoisesvn.net/) does the same through Explorer.

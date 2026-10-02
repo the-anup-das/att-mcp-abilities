@@ -159,6 +159,43 @@ function att_mcp_sanitize_controls( $input ) {
     );
 }
 
+/* ----- MCP Adapter's default server ----------------------------------------- */
+
+/** REST route of the MCP server AI clients connect to (MCP Adapter's default server). */
+function att_mcp_endpoint_route() {
+    return '/mcp/mcp-adapter-default-server';
+}
+
+/**
+ * Keep MCP Adapter's default server on while MCP is enabled here. Any plugin can
+ * switch that server off for the whole site with the mcp_adapter_create_default_server
+ * filter (Elementor 4.3 does while its own MCP feature is off), which leaves every
+ * client of this plugin with a 404 "rest_no_route".
+ * Opt out: add_filter( 'att_mcp_keep_default_server', '__return_false' ).
+ */
+function att_mcp_keep_default_server( $create ) {
+    if ( $create || ! att_mcp_is_active() ) {
+        return $create;
+    }
+    return (bool) apply_filters( 'att_mcp_keep_default_server', true );
+}
+
+/**
+ * Start MCP Adapter when nothing else did: its classes can be on the site only as a
+ * library bundled by another plugin (Elementor ships one), which loads it without
+ * starting it. A no-op when the MCP Adapter plugin is active (it is a singleton).
+ */
+function att_mcp_boot_adapter() {
+    if ( att_mcp_is_active() && function_exists( 'wp_register_ability' ) && class_exists( 'WP\MCP\Core\McpAdapter' ) ) {
+        \WP\MCP\Core\McpAdapter::instance();
+    }
+}
+
+/** Is the endpoint AI clients connect to registered on this site? */
+function att_mcp_endpoint_available() {
+    return array_key_exists( att_mcp_endpoint_route(), rest_get_server()->get_routes() );
+}
+
 /* ----- Rate limiting -------------------------------------------------------- */
 
 /**

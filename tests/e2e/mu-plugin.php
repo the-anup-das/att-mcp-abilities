@@ -9,6 +9,11 @@ remove_action( 'admin_init', '_maybe_update_core' );
 remove_action( 'admin_init', '_maybe_update_plugins' );
 remove_action( 'admin_init', '_maybe_update_themes' );
 
+// Elementor (4.3) switches MCP Adapter's default server off for the whole site while its
+// own MCP feature is off. Do the same here, so every suite (the real MCP session
+// included) only passes because the plugin keeps the server its clients connect to.
+add_filter( 'mcp_adapter_create_default_server', '__return_false' );
+
 // Mail never leaves the throwaway site: wp_mail() is answered here, and the last 20
 // messages are kept in the option att_e2e_mail_log for the tests to look at.
 add_filter( 'pre_wp_mail', function ( $return, $atts ) {
