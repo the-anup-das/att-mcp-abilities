@@ -5,12 +5,12 @@
 > **By ATT ([AnupTechTips](https://anuptechtips.com))**
 
 [![CI](https://github.com/the-anup-das/att-mcp-abilities/actions/workflows/ci.yml/badge.svg)](https://github.com/the-anup-das/att-mcp-abilities/actions/workflows/ci.yml)
-![Version](https://img.shields.io/badge/version-1.13.0-3D7BF7)
+![Version](https://img.shields.io/badge/version-1.13.1-3D7BF7)
 ![WordPress](https://img.shields.io/badge/WordPress-6.9%E2%80%937.1-21759b)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-green)](LICENSE)
 
-Let AI agents (Claude, Cursor, Codex, Antigravity) read your WordPress site and, where you allow it, **build it, edit it, speed it up and optimise it for search**. It works through the WordPress Abilities API and the [MCP Adapter](https://github.com/WordPress/mcp-adapter). Every ability is an opt-in toggle, and every write can be paused, rate-limited and audited; most can also be undone.
+Let AI agents (Claude, Cursor, Codex, Antigravity) read your WordPress site and, where you allow it, **build it, edit it, speed it up and optimise it for search**. It works through the WordPress Abilities API and the [MCP Adapter](https://github.com/WordPress/mcp-adapter), which is bundled. Every ability is an opt-in toggle, and every write can be paused, rate-limited and audited; most can also be undone.
 
 ---
 
@@ -90,14 +90,15 @@ Found a vulnerability? Please follow [SECURITY.md](SECURITY.md).
 | `att-mcp-abilities/` | The plugin (this folder is what ships) |
 | `.wordpress-org/` | WordPress.org directory icon, banners and screenshots |
 | `brand/` | Generator for the logo, menu icon, icons and banners (`npm install && npm run build`) |
-| `tests/e2e/` | End-to-end suite: a throwaway WordPress site on SQLite plus MCP Adapter |
+| `tests/e2e/` | End-to-end suite: a throwaway WordPress site on SQLite |
+| `att-mcp-abilities/vendor/` | Bundled libraries (MCP Adapter, its schema package, Jetpack Autoloader), installed with Composer and committed |
 | `docs/RELEASING.md` | How to submit to and release on WordPress.org |
 | `build.ps1` | Builds `dist/att-mcp-abilities-<version>.zip` |
 
 ## 🧪 Development
 
 ```bash
-bash tests/e2e/setup.sh        # throwaway WordPress (SQLite) + MCP Adapter + this plugin
+bash tests/e2e/setup.sh        # throwaway WordPress (SQLite) + this plugin (+ the MCP Adapter plugin, to test both together)
 bash tests/e2e/run-all.sh      # every ability and guard, admin screens, a real MCP session, uninstall
 bash tests/e2e/run-all.sh --net   # also the real SEO and cache plugins from WordPress.org
 pwsh ./build.ps1               # dist/att-mcp-abilities-<version>.zip, ready for WordPress.org

@@ -82,6 +82,17 @@ function att_mcp_adapter_active() {
     return defined( 'WP_MCP_VERSION' ) || class_exists( 'WP\\MCP\\Plugin' ) || class_exists( 'WP\\MCP\\Core\\McpAdapter' );
 }
 
+/**
+ * Is the separate MCP Adapter plugin active in a version older than this plugin is
+ * tested with (0.6)? Such a copy loads its own classes instead of the bundled ones.
+ */
+function att_mcp_adapter_plugin_outdated( $version = null ) {
+    if ( null === $version ) {
+        $version = defined( 'WP_MCP_VERSION' ) ? WP_MCP_VERSION : '';
+    }
+    return '' !== (string) $version && version_compare( (string) $version, '0.6.0', '<' );
+}
+
 /** Warn admins (on the Plugins screen and MCP screens only) when MCP Adapter is missing (an incomplete copy of this plugin). */
 function att_mcp_dependency_notice() {
     if ( att_mcp_adapter_active() || ! current_user_can( 'activate_plugins' ) ) {

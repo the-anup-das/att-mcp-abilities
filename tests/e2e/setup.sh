@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Builds a throwaway WordPress test site in tests/e2e/wordpress:
 #   WordPress (WP_ZIP, default "latest") + SQLite Database Integration (no MySQL needed)
-#   + MCP Adapter (latest GitHub release) + this plugin linked in live.
+#   + this plugin linked in live + the MCP Adapter plugin (latest GitHub release,
+#   left inactive: only used to test it running next to the bundled copy).
 #
 #   WP_ZIP=latest            bash tests/e2e/setup.sh   # current WordPress
 #   WP_ZIP=wordpress-6.9     bash tests/e2e/setup.sh   # minimum supported version

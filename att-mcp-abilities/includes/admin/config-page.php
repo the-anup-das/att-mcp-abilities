@@ -79,6 +79,17 @@ function att_mcp_config_page() {
     <div class="att-wrap">
         <?php att_mcp_admin_header( 'config' ); ?>
         <p class="att-desc"><?php esc_html_e( 'Connect an AI client (Claude, Cursor, Codex, Antigravity…) to this site in two steps. Your API URL and username are filled in automatically.', 'att-mcp-abilities' ); ?></p>
+        <?php if ( att_mcp_adapter_plugin_outdated() ) : ?>
+            <div class="notice notice-warning inline att-adapter-outdated"><p>
+                <?php
+                printf(
+                    /* translators: %s: version number of the MCP Adapter plugin */
+                    esc_html__( 'The separate MCP Adapter plugin (version %s) is active and older than the MCP Adapter this plugin includes, so the old one is being used. Remove it in Plugins, or update it to 0.6 or newer.', 'att-mcp-abilities' ),
+                    esc_html( WP_MCP_VERSION )
+                );
+                ?>
+            </p></div>
+        <?php endif; ?>
         <?php if ( att_mcp_adapter_active() && ! att_mcp_endpoint_available() ) : ?>
             <div class="notice notice-error inline att-endpoint-missing"><p>
                 <?php

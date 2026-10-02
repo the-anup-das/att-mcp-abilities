@@ -3,7 +3,7 @@
  * Plugin Name:       ATT MCP Abilities
  * Plugin URI:        https://github.com/the-anup-das/att-mcp-abilities
  * Description:      Lets AI agents (Claude, Cursor, Codex…) read and — only where you allow it — build, edit, speed up and optimise (SEO) your site through the WordPress Abilities API and MCP Adapter, with per-ability toggles, read-only mode, undo, and an audit log.
- * Version:           1.13.0
+ * Version:           1.13.1
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            ATT
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'ATT_MCP_VERSION', '1.13.0' );
+define( 'ATT_MCP_VERSION', '1.13.1' );
 define( 'ATT_MCP_FILE', __FILE__ );
 define( 'ATT_MCP_OPTION', 'att_mcp_abilities' );
 define( 'ATT_MCP_ADDONS_OPTION', 'att_mcp_addons' );

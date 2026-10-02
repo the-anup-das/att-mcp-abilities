@@ -4,7 +4,7 @@ Tags: mcp, ai, abilities api, seo, performance
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.13.0
+Stable tag: 1.13.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Connect AI agents (Claude, Cursor, Codex) to WordPress over MCP — with per-abi
 
 == Description ==
 
-ATT MCP Abilities lets AI agents such as Claude, Cursor, Codex, and Antigravity read your site and — only where you allow it — build and edit it, through the WordPress Abilities API and the MCP Adapter plugin.
+ATT MCP Abilities lets AI agents such as Claude, Cursor, Codex, and Antigravity read your site and — only where you allow it — build and edit it, through the WordPress Abilities API and MCP Adapter, the WordPress project's MCP server, which is included.
 
 You decide exactly what an agent may do. Every ability is a separate toggle, all write abilities are off by default, and integrations with other plugins and themes are opt-in addons.
 
@@ -65,7 +65,7 @@ For the least privilege, create a dedicated Editor user for AI agents and genera
 
 = Do I need the MCP Adapter plugin? =
 
-Not separately. Since 1.13.0 this plugin includes MCP Adapter (the WordPress project's MCP server, GPL) and starts it itself. If you already have the MCP Adapter plugin active, you can keep it (0.6 or newer) or remove it; when several copies are present, the newest one is used.
+Not separately. Since 1.13.0 this plugin includes MCP Adapter (the WordPress project's MCP server, GPL) and starts it itself. If you already have the MCP Adapter plugin active, you can remove it. A copy from 0.6 on can also stay (the newest copy on the site is used); an older one takes over with its old code, and MCP › Connect tells you to remove or update it.
 
 = My AI client cannot connect: "No route was found matching the URL and request method" (404). =
 
@@ -139,6 +139,9 @@ The connection snippets on the Connect screen run the `@automattic/mcp-wordpress
 The audit log (MCP › Activity) stores, in your own database, the time, ability name, user ID, status, duration, and the call inputs with secret-looking values redacted — the newest 500 entries. Inputs can contain personal data an agent sent, such as a customer's name and email address when it books an appointment. The change history stores the previous values of settings an agent changed — the newest 50 changes. If you enable the daily summary, a list of write calls is emailed to the site's admin address. Everything is deleted when you uninstall the plugin.
 
 == Changelog ==
+
+= 1.13.1 =
+* New: MCP › Connect says when an old MCP Adapter plugin (before 0.6) is still active and being used instead of the included one.
 
 = 1.13.0 =
 * New: MCP Adapter is included. You no longer need to install it separately from GitHub: activate this plugin and connect. An MCP Adapter plugin that is already active keeps working alongside it.

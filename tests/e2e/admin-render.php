@@ -21,7 +21,8 @@ t_ok( 'settings page has nonce fields', false !== strpos( $settings, 'name="_wpn
 $config = render_screen( 'att-mcp-config', 'att_mcp_config_page' );
 t_ok( 'connect page renders password generator', false !== strpos( $config, 'id="att-mcp-pw-generate"' ), substr( wp_strip_all_tags( $config ), 0, 300 ) );
 t_ok( 'connect page shows 5 client configs', 5 === substr_count( $config, 'data-att-config="1"' ) );
-t_ok( 'connect page does not warn about a missing endpoint', false === strpos( $config, 'att-endpoint-missing' ) );
+t_ok( 'connect page does not warn about a missing endpoint or an old MCP Adapter plugin', false === strpos( $config, 'att-endpoint-missing' ) && false === strpos( $config, 'att-adapter-outdated' ) );
+t_ok( 'an MCP Adapter plugin older than 0.6 is recognised as outdated', att_mcp_adapter_plugin_outdated( '0.5.0' ) && ! att_mcp_adapter_plugin_outdated( '0.6.1' ) && ! att_mcp_adapter_plugin_outdated() );
 t_ok( 'config contains REST URL + username', false !== strpos( $config, 'mcp-adapter-default-server' ) && false !== strpos( $config, '&quot;WP_API_USERNAME&quot;: &quot;admin&quot;' ) );
 
 $activity = render_screen( 'att-mcp-activity', 'att_mcp_activity_page' );
