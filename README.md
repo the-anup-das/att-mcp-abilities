@@ -5,7 +5,7 @@
 > **By ATT ([AnupTechTips](https://anuptechtips.com))**
 
 [![CI](https://github.com/the-anup-das/att-mcp-abilities/actions/workflows/ci.yml/badge.svg)](https://github.com/the-anup-das/att-mcp-abilities/actions/workflows/ci.yml)
-![Version](https://img.shields.io/badge/version-1.12.1-3D7BF7)
+![Version](https://img.shields.io/badge/version-1.13.0-3D7BF7)
 ![WordPress](https://img.shields.io/badge/WordPress-6.9%E2%80%937.1-21759b)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-green)](LICENSE)
@@ -54,9 +54,9 @@ Every ability starts **OFF** except a few safe reads: published posts, pages, ca
 
 ## 🚀 Quick start
 
-**Prerequisites:** WordPress 6.9+ (the Abilities API is in core), the [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, and Node.js 18+ on the computer running your AI client.
+**Prerequisites:** WordPress 6.9+ (the Abilities API is in core), and Node.js 18+ on the computer running your AI client.
 
-1. Install and activate **MCP Adapter** and this plugin.
+1. Install and activate this plugin. [MCP Adapter](https://github.com/WordPress/mcp-adapter) is bundled (`att-mcp-abilities/vendor/`, managed with Composer).
 2. In **MCP → Settings**, enable the addons and abilities you want.
 3. In **MCP → Connect**, click **Generate password**, then copy the config for your AI client.
 4. Paste it into your client (e.g. `claude_desktop_config.json`, or run the Claude Code command) and restart the client.

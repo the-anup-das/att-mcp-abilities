@@ -8,7 +8,6 @@ require __DIR__ . '/bootstrap.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 wp_set_current_user( 1 );
 
-activate_plugin( 'mcp-adapter/mcp-adapter.php' );
 update_option( 'blogname', 'Demo Site' );
 global $wp_rewrite;
 $wp_rewrite->set_permalink_structure( '/%postname%/' );

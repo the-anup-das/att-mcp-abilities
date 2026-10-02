@@ -181,9 +181,9 @@ function att_mcp_keep_default_server( $create ) {
 }
 
 /**
- * Start MCP Adapter when nothing else did: its classes can be on the site only as a
- * library bundled by another plugin (Elementor ships one), which loads it without
- * starting it. A no-op when the MCP Adapter plugin is active (it is a singleton).
+ * Start MCP Adapter. This plugin bundles it as a library (vendor/), which loads its
+ * classes without starting it. A no-op when the MCP Adapter plugin, or another plugin
+ * bundling it, already did (it is a singleton).
  */
 function att_mcp_boot_adapter() {
     if ( att_mcp_is_active() && function_exists( 'wp_register_ability' ) && class_exists( 'WP\MCP\Core\McpAdapter' ) ) {

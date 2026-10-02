@@ -4,7 +4,7 @@ Tags: mcp, ai, abilities api, seo, performance
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.12.1
+Stable tag: 1.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -48,12 +48,12 @@ You decide exactly what an agent may do. Every ability is a separate toggle, all
 **Requirements**
 
 * WordPress 6.9 or later (the Abilities API is part of core).
-* The [MCP Adapter](https://github.com/WordPress/mcp-adapter) plugin, which exposes abilities to MCP clients.
+* Nothing else to install on the site: [MCP Adapter](https://github.com/WordPress/mcp-adapter), the WordPress project's MCP server, is included.
 * An MCP client (Claude Desktop, Claude Code, Cursor, Codex, Antigravity, …). The generated connection uses the `@automattic/mcp-wordpress-remote` package, which runs on your own computer via Node.js 18+.
 
 == Installation ==
 
-1. Install and activate **MCP Adapter** and this plugin.
+1. Install and activate this plugin (MCP Adapter is included).
 2. Open **MCP › Settings**, enable the addons and abilities you want, and save.
 3. Open **MCP › Connect**, click **Generate password** to create an Application Password, and copy the configuration for your AI client.
 4. Paste the configuration into your client (for example `claude_desktop_config.json`) and restart it.
@@ -65,11 +65,11 @@ For the least privilege, create a dedicated Editor user for AI agents and genera
 
 = Do I need the MCP Adapter plugin? =
 
-Yes. This plugin registers the abilities; MCP Adapter exposes them to MCP clients. A notice appears on the Plugins screen while it is missing.
+Not separately. Since 1.13.0 this plugin includes MCP Adapter (the WordPress project's MCP server, GPL) and starts it itself. If you already have the MCP Adapter plugin active, you can keep it (0.6 or newer) or remove it; when several copies are present, the newest one is used.
 
 = My AI client cannot connect: "No route was found matching the URL and request method" (404). =
 
-The address clients connect to (`/wp-json/mcp/mcp-adapter-default-server`) is MCP Adapter's default server. Make sure the MCP Adapter plugin is active and up to date (0.6 or newer) and that "MCP enabled" is on under MCP › Settings. Some plugins switch that server off for the whole site: Elementor 4.3 does while its own MCP feature is off. Since 1.12.1 this plugin keeps it on while MCP is enabled, and MCP › Connect tells you when the address does not exist.
+The address clients connect to (`/wp-json/mcp/mcp-adapter-default-server`) is MCP Adapter's default server. Make sure "MCP enabled" is on under MCP › Settings, and if you run the separate MCP Adapter plugin, that it is 0.6 or newer. Some plugins switch that server off for the whole site: Elementor 4.3 does while its own MCP feature is off. Since 1.12.1 this plugin keeps it on while MCP is enabled, and MCP › Connect tells you when the address does not exist.
 
 = The Connect screen says Application Passwords are unavailable. =
 
@@ -140,6 +140,9 @@ The audit log (MCP › Activity) stores, in your own database, the time, ability
 
 == Changelog ==
 
+= 1.13.0 =
+* New: MCP Adapter is included. You no longer need to install it separately from GitHub: activate this plugin and connect. An MCP Adapter plugin that is already active keeps working alongside it.
+
 = 1.12.1 =
 * Fix: AI clients could not connect ("No route was found", 404) on sites where another plugin switches off MCP Adapter's default server, as Elementor 4.3 does while its own MCP feature is off. The server is now kept on while MCP is enabled.
 * New: MCP Adapter is started when it is present only as a library inside another plugin.
@@ -198,6 +201,9 @@ The audit log (MCP › Activity) stores, in your own database, the time, ability
 * Addon framework, MCP Controls (kill switch, read-only mode, audit log), secret redaction, and the Activity screen.
 
 == Upgrade Notice ==
+
+= 1.13.0 =
+MCP Adapter is now included, so the separate MCP Adapter plugin is no longer required.
 
 = 1.12.1 =
 Fixes AI clients failing to connect (404 "No route was found") on sites running Elementor 4.3.

@@ -85,7 +85,7 @@ function att_mcp_config_page() {
                 echo wp_kses(
                     sprintf(
                         /* translators: %s: the API URL AI clients connect to */
-                        __( '<strong>AI clients cannot connect yet:</strong> the address %s does not exist on this site (they get a 404 "No route was found"). Check that <strong>MCP enabled</strong> is on in MCP › Settings, that the MCP Adapter plugin is active and up to date (0.6 or newer), and that no other plugin switches off the default server of MCP Adapter.', 'att-mcp-abilities' ),
+                        __( '<strong>AI clients cannot connect yet:</strong> the address %s does not exist on this site (they get a 404 "No route was found"). Check that <strong>MCP enabled</strong> is on in MCP › Settings. If you also run the separate MCP Adapter plugin, update it to 0.6 or newer, or remove it: this plugin includes MCP Adapter.', 'att-mcp-abilities' ),
                         '<code>' . esc_html( $api_url ) . '</code>'
                     ),
                     array( 'strong' => array(), 'code' => array() )

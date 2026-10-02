@@ -77,12 +77,12 @@ function att_mcp_admin_credit() {
     ) . '</p>';
 }
 
-/** True when the MCP Adapter plugin (which exposes abilities as MCP tools) is active. */
+/** True when MCP Adapter (bundled in vendor/, or the separate plugin) is loaded: it exposes abilities as MCP tools. */
 function att_mcp_adapter_active() {
     return defined( 'WP_MCP_VERSION' ) || class_exists( 'WP\\MCP\\Plugin' ) || class_exists( 'WP\\MCP\\Core\\McpAdapter' );
 }
 
-/** Warn admins (on the Plugins screen and MCP screens only) when MCP Adapter is missing. */
+/** Warn admins (on the Plugins screen and MCP screens only) when MCP Adapter is missing (an incomplete copy of this plugin). */
 function att_mcp_dependency_notice() {
     if ( att_mcp_adapter_active() || ! current_user_can( 'activate_plugins' ) ) {
         return;
@@ -93,7 +93,7 @@ function att_mcp_dependency_notice() {
     }
     $msg = sprintf(
         /* translators: 1: this plugin's name, 2: required plugin's name */
-        __( '%1$s needs the %2$s plugin to expose its abilities to AI clients. The Abilities API ships with WordPress 6.9+, but without MCP Adapter active your tools are not reachable over MCP.', 'att-mcp-abilities' ),
+        __( '%1$s could not load %2$s, which it includes to connect AI clients: this copy of the plugin is incomplete (its "vendor" folder is missing). Install the plugin again from its zip, or install the MCP Adapter plugin.', 'att-mcp-abilities' ),
         '<strong>ATT MCP Abilities</strong>',
         '<strong>MCP Adapter</strong>'
     );

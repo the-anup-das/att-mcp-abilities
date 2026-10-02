@@ -3,7 +3,7 @@
  * Plugin Name:       ATT MCP Abilities
  * Plugin URI:        https://github.com/the-anup-das/att-mcp-abilities
  * Description:      Lets AI agents (Claude, Cursor, Codex…) read and — only where you allow it — build, edit, speed up and optimise (SEO) your site through the WordPress Abilities API and MCP Adapter, with per-ability toggles, read-only mode, undo, and an audit log.
- * Version:           1.12.1
+ * Version:           1.13.0
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            ATT
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'ATT_MCP_VERSION', '1.12.1' );
+define( 'ATT_MCP_VERSION', '1.13.0' );
 define( 'ATT_MCP_FILE', __FILE__ );
 define( 'ATT_MCP_OPTION', 'att_mcp_abilities' );
 define( 'ATT_MCP_ADDONS_OPTION', 'att_mcp_addons' );
@@ -23,6 +23,13 @@ define( 'ATT_MCP_CONTROLS_OPTION', 'att_mcp_controls' );
 define( 'ATT_MCP_APP_ID', '7d4f2b1e-3c9a-4e8b-9f61-2a5c8d0e4b73' ); // app_id stamped on Application Passwords created from MCP > Connect
 define( 'ATT_MCP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'ATT_MCP_URL', plugin_dir_url( __FILE__ ) );
+
+// MCP Adapter, the MCP server AI clients connect to, is bundled (vendor/). The Jetpack
+// Autoloader loads the newest copy when another plugin, or the MCP Adapter plugin
+// itself, ships one too.
+if ( is_readable( ATT_MCP_DIR . 'vendor/autoload_packages.php' ) ) {
+    require_once ATT_MCP_DIR . 'vendor/autoload_packages.php';
+}
 
 require_once ATT_MCP_DIR . 'includes/helpers.php';
 require_once ATT_MCP_DIR . 'includes/analysis.php';
@@ -61,7 +68,7 @@ require_once ATT_MCP_DIR . 'includes/abilities/advanced.php';
 register_activation_hook( __FILE__, 'att_mcp_activate' );
 register_deactivation_hook( __FILE__, 'att_mcp_deactivate' );
 
-add_action( 'plugins_loaded',                   'att_mcp_boot_adapter', 20 ); // MCP Adapter bundled by another plugin but not started
+add_action( 'plugins_loaded',                   'att_mcp_boot_adapter', 20 ); // start the bundled MCP Adapter
 add_filter( 'mcp_adapter_create_default_server', 'att_mcp_keep_default_server', PHP_INT_MAX ); // the server clients connect to
 add_action( 'init',                             'att_mcp_maybe_upgrade' );
 add_action( 'admin_menu',                       'att_mcp_add_menu' );

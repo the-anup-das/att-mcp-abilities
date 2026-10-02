@@ -31,7 +31,8 @@ if [ -n "${ATT_BROWSER:-}" ]; then
 else
   echo; echo "(Skipping the browser test — set ATT_BROWSER to a Chrome or Edge executable to run it.)"
 fi
-step "Real MCP session";     "${PHP_BIN}" setup-options.php && "${PHP_BIN}" mcp-setup.php && "${PHP_BIN}" mcp-client-test.php
+step "Real MCP session (bundled MCP Adapter)"; "${PHP_BIN}" setup-options.php && "${PHP_BIN}" mcp-setup.php && "${PHP_BIN}" mcp-client-test.php
+step "Real MCP session with the MCP Adapter plugin active too"; "${PHP_BIN}" mcp-revoke.php && "${PHP_BIN}" mcp-setup.php with-adapter-plugin && "${PHP_BIN}" mcp-client-test.php
 
 # Up to here nothing at all may be logged.
 if [ -s "${LOG}" ]; then

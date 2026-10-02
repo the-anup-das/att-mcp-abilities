@@ -1,0 +1,21 @@
+{
+	"name": "the-anup-das/att-mcp-abilities",
+	"description": "ATT MCP Abilities - bundled libraries (MCP Adapter).",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=7.4",
+		"automattic/jetpack-autoloader": "^5.0",
+		"wordpress/mcp-adapter": "^0.6.1"
+	},
+	"config": {
+		"platform": {
+			"php": "7.4.33"
+		},
+		"allow-plugins": {
+			"automattic/jetpack-autoloader": true
+		},
+		"optimize-autoloader": true,
+		"sort-packages": true
+	}
+}
